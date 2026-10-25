@@ -126,6 +126,7 @@ function startGame(sx, sz, sbm){
   gameOn=true; addChat(WORLD.cheats ? 'Press T to chat, / to type a command (/help).' : 'Press T to chat.', '#ffff55');
   P.x = sx+0.5; P.z = sz+0.5; P.y = sbm.h+3;
   P.px = P.x; P.py = P.y; P.pz = P.z;
+  svInit(P.x, P.z);   // vie, faim, point de réapparition
   document.getElementById('cross').style.display='block';
   document.getElementById('hud').style.display='flex';
   document.getElementById('clk').style.display='block';
