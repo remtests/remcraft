@@ -4,9 +4,10 @@
 // INPUT
 // ════════════════════════════════════════════════
 const K={};
-let mdx=0,mdy=0,mldown=false;
+let mdx=0,mdy=0,mldown=false,mrdown=false;
 // Souris brute : pas d'accélération/lissage du système (unadjustedMovement) et rotation appliquée immédiatement
 function lockPtr(){
+  if(SV.dead) return;   // écran de mort : le curseur reste libre
   const c=document.getElementById('c');
   try{
     const p=c.requestPointerLock({unadjustedMovement:true});
@@ -22,7 +23,7 @@ addEventListener('keydown',e=>{
   K[e.code]=true;
   if(e.code==='F3'){e.preventDefault();S.showDebug=!S.showDebug;saveSettings();refreshSettingsUI();return;}
   if(e.code==='F5'&&gameOn&&!e.ctrlKey&&!e.metaKey){e.preventDefault();if(!e.repeat&&!uiOn&&!paused)camMode=(camMode+1)%3;document.getElementById('cross').style.display=camMode===0?'block':'none';return;}
-  if(!gameOn) return;
+  if(!gameOn || SV.dead) return;
   if(!uiOn && !paused && !e.ctrlKey && !e.metaKey && !e.altKey && (e.code==='KeyT' || e.code==='Enter' || e.key==='/')){
     e.preventDefault(); openChat(e.key==='/' ? '/' : ''); return;
   }
@@ -51,16 +52,22 @@ addEventListener('mousemove',e=>{
   }
 });
 addEventListener('mousedown',e=>{
-  if(!gameOn) return;
+  if(!gameOn || SV.dead) return;
   if(!document.pointerLockElement&&!uiOn&&!paused){
     lockPtr(); return;
   }
   if(document.pointerLockElement&&!uiOn){
     if(e.button===0 && !punchFire()) mldown=true;
-    if(e.button===2){doPlace();e.preventDefault();}
+    if(e.button===2){
+      mrdown = true;
+      const tt = castRay(), bd = tt && BLOCKS[tt.bid], inter = bd && (bd.isCraft || bd.isFurnace || bd.isChest);   // un bloc interactif prime sur manger
+      if(inter || !svTryEat()) doPlace();
+      e.preventDefault();
+    }
   }
 });
 addEventListener('mouseup',e=>{
+  if(e.button===2) mrdown=false;
   if(e.button===0){mldown=false;P.breaking=null;P.bprog=0;_hideBreak();
     document.getElementById('bbar').style.display='none';}
 });
@@ -70,7 +77,7 @@ addEventListener('wheel',e=>{
   P.hotbar=((P.hotbar+(e.deltaY>0?1:-1))+9)%9; drawHotbar();
 },{passive:true});
 addEventListener('pointerlockchange',()=>{
-  if(!document.pointerLockElement&&gameOn&&!uiOn&&!paused) doPause();
+  if(!document.pointerLockElement&&gameOn&&!uiOn&&!paused&&!SV.dead) doPause();
 });
 
 function doPause(){paused=true;document.exitPointerLock();document.getElementById('pause').style.display='flex';mpRefreshPause();}
