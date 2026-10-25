@@ -67,7 +67,7 @@ function itemTable(){
     crafting_table:11,iron_ore:12,coal_ore:13,glass:14,gold_ore:15,diamond_ore:16,bookshelf:17,tnt:18,wool:19,torch:'torch',
     furnace:21,cactus:22,water:23,tall_grass:24,short_grass:24,poppy:25,blue_orchid:26,chest:27,air:0};
   for(const k in EN) add(k, EN[k]);
-  for(const id in BLOCKS){ const b = BLOCKS[id]; add(b.sid, id==20 ? 'torch' : +id); add(b.name, id==20 ? 'torch' : +id); }
+  for(const id in BLOCKS){ const b = BLOCKS[id]; if(b.variantOf) continue; add(b.sid, id==20 ? 'torch' : +id); add(b.name, id==20 ? 'torch' : +id); }
   for(const k in ITEMS){ if(IMGS[k]){ add(k,k); add(ITEMS[k].name,k); } }
   return _itemTable = t;
 }
