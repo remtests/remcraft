@@ -31,15 +31,23 @@ function makeWaterCanvas(){
   for(let i=0;i<40;i++){ c.fillStyle = r()<0.5 ? '#3a6ee0' : '#2753b8'; c.fillRect((r()*16)|0,(r()*16)|0,2,1); }
   return cv;
 }
+// Copie d'une tuile 16×16 tournée de 90° (écorce des bûches horizontales : les fibres suivent l'axe du tronc)
+function rotatedCanvas(src){
+  if(!src) return null;
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const x = c.getContext('2d'); x.imageSmoothingEnabled = false;
+  x.translate(8,8); x.rotate(Math.PI/2); x.drawImage(src,0,0,16,16,-8,-8,16,16);
+  return c;
+}
 function buildAtlas(){
-  const names = new Set(['stone','torch_block']);
+  const names = new Set(['stone','torch_block','log_side_r']);
   for(const id in BLOCKS){ const b = BLOCKS[id]; names.add(b.tTop); names.add(b.tSide); names.add(b.tBot); if(b.tFront) names.add(b.tFront); }
   const cv = document.createElement('canvas'); cv.width = cv.height = ATLAS_SZ;
   const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
   let i = 0;
   const G = ATLAS_GUT;
   for(const n of names){
-    const src = GRAY[n] || IMGS[n] || (n==='water' ? makeWaterCanvas() : IMGS['stone']);
+    const src = GRAY[n] || IMGS[n] || (n==='water' ? makeWaterCanvas() : n==='log_side_r' ? rotatedCanvas(IMGS['log_side']) : IMGS['stone']);
     const col = i%ATLAS_PER_ROW, row = (i/ATLAS_PER_ROW)|0;
     const ox = col*ATLAS_CELL+G, oy = row*ATLAS_CELL+G;
     if(src){
