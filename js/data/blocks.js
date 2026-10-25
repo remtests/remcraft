@@ -30,6 +30,9 @@ const BLOCKS = {
   25:{name:'Poppy', sid:'poppy',   tTop:'poppy',       tSide:'poppy',       tBot:'poppy',       hard:0, drop:25,   needsPick:0, isCraft:false, noCollide:true, plant:true},
   26:{name:'Blue Orchid', sid:'blue_orchid',tTop:'blue_orchid',tSide:'blue_orchid', tBot:'blue_orchid', hard:0, drop:26,   needsPick:0, isCraft:false, noCollide:true, plant:true},
   27:{name:'Chest', sid:'chest',     tTop:'chest_top',  tSide:'chest_side',  tBot:'chest_top',  tFront:'chest_front', icon:'chest_front', hard:2.5, drop:27, needsPick:0, isCraft:false, isChest:true},
+  // Bûche posée à l'horizontale (comme dans Minecraft : l'axe dépend de la face visée à la pose). Même drop que la bûche (id 5).
+  28:{name:'Oak Log', sid:'oak_log_x', variantOf:5, tTop:'log_top', tSide:'log_side', tBot:'log_top', hard:2, drop:5, needsPick:0, isCraft:false},   // axe X (est-ouest)
+  29:{name:'Oak Log', sid:'oak_log_z', variantOf:5, tTop:'log_top', tSide:'log_side', tBot:'log_top', hard:2, drop:5, needsPick:0, isCraft:false},   // axe Z (nord-sud)
   23:{name:'Water', sid:'water',        tTop:'water',      tSide:'water',       tBot:'water',      hard:100, drop:null, needsPick:0, isCraft:false, noCollide:true, isFluid:true},
 };
 
