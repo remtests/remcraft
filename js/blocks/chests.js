@@ -110,8 +110,13 @@ function doPlace(){
     CHEST_DIR.set(k, Math.abs(ddx)>Math.abs(ddz) ? (ddx>0?0:1) : (ddz>0?2:3));
     CHESTS.delete(k);
   }
+  let placeId = blockId;
+  if(blockId===5){   // bûche : axe selon la face visée (haut/bas → vertical, est/ouest → axe X, nord/sud → axe Z)
+    const fx = t.pbx-t.bx, fz = t.pbz-t.bz, fy = t.pby-t.by;
+    if(!tp && fy===0){ if(fx!==0) placeId = 28; else if(fz!==0) placeId = 29; }
+  }
   removeFireAt(px,py,pz);
-  setB(px,py,pz,blockId); markDirty(px,py,pz,blockId===20);
+  setB(px,py,pz,placeId); markDirty(px,py,pz,blockId===20);
   if(WORLD.mode!=='creative'){ it.n--; if(it.n<=0){it.id=null;it.n=0;} }   // créatif : blocs infinis
   drawHotbar();
 }
