@@ -25,7 +25,7 @@ let _creativeList = null;
 function creativeList(){
   if(_creativeList) return _creativeList;
   const l = [];
-  for(const id in BLOCKS){ const i=+id; if(i===23) continue; l.push(i===20 ? 'torch' : i); }
+  for(const id in BLOCKS){ const i=+id; if(i===23 || BLOCKS[i].variantOf) continue; l.push(i===20 ? 'torch' : i); }
   for(const k in ITEMS) if(IMGS[k] && !l.includes(k)) l.push(k);
   return _creativeList = l;
 }
