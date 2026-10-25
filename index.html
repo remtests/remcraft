@@ -103,9 +103,17 @@
 
 <div id="cross"></div>
 <div id="bbar"><div id="bfill"></div></div>
+<div id="ebar"><div id="efill"></div></div>
+<div id="sv-hurt"></div>
+<div id="sv-burn"></div>
+<div id="death"><h1>You died!</h1><p id="death-cause"></p><button onclick="svRespawn()">Respawn</button></div>
 <div id="hud" style="display:none;flex-direction:column;align-items:center;padding-bottom:8px;position:fixed;bottom:0;left:0;right:0;pointer-events:none;z-index:100;">
   <div style="display:flex;align-items:flex-end;">
-    <div id="hotbar"></div>
+    <div id="hotbar-col">
+      <div id="sv-air"></div>
+      <div id="sv-status"><div id="sv-hearts"></div><div id="sv-food"></div></div>
+      <div id="hotbar"></div>
+    </div>
     <div id="offhand-wrap">
       <div id="offhand-slot" onclick="offhandClick()" title="Offhand (F)"></div>
       <span id="offhand-label">F</span>
@@ -265,6 +273,7 @@
 <script src="js/input/input.js"></script>
 <script src="js/ui/chat-commands.js"></script>
 <script src="js/player/physics.js"></script>
+<script src="js/player/survival.js"></script>
 <script src="js/player/raycast-and-breaking.js"></script>
 <script src="js/entities/break-particles.js"></script>
 <script src="js/blocks/chests.js"></script>
