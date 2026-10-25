@@ -9,7 +9,8 @@ const chatEl = document.getElementById('chat'), chatLog = document.getElementByI
 const chatHist = []; let chatHistI = 0;
 const CMD_INFO = {
   give:'Gives an item or block', tp:'Teleports you', time:'Sets, adds or reads the time of day',
-  fill:'Fills a region with a block', gamemode:'Changes your game mode', locate:'Finds the nearest biome', help:'Lists the commands'
+  fill:'Fills a region with a block', gamemode:'Changes your game mode', locate:'Finds the nearest biome',
+  kill:'Kills you', heal:'Restores your health and hunger', help:'Lists the commands'
 };
 const CMDS = Object.keys(CMD_INFO);
 const CMD_ALIAS = {teleport:'tp', gm:'gamemode', '?':'help'};
@@ -124,6 +125,8 @@ const CMD_SPEC = {
   },
   gamemode(a,i){ return {tokens:['<survival|creative>'], cur: i===0?0:-1, cands: i===0?['survival','creative']:[], desc:'Your new game mode'}; },
   locate(a,i){ return {tokens:['biome','<biome>'], cur: i<2 ? i : -1, cands: i===0 ? ['biome'] : i===1 ? BIOME_IDS : [], desc: i===0 ? 'What to look for' : i===1 ? 'Finds the nearest biome and tells you where it is' : ''}; },
+  kill(){ return {tokens:[], cur:-1, cands:[], desc:'Kills you (your items drop)'}; },
+  heal(){ return {tokens:[], cur:-1, cands:[], desc:'Restores health and hunger'}; },
   help(){ return {tokens:[], cur:-1, cands:[], desc:'Lists the commands'}; }
 };
 function cmdSyntax(v){
@@ -207,6 +210,8 @@ function runCommand(line){
     else if(cmd==='fill') cmdFill(a);
     else if(cmd==='gamemode' || cmd==='gm') cmdGamemode(a);
     else if(cmd==='locate') cmdLocate(a);
+    else if(cmd==='kill'){ if(SV.dead) return chatErr('You are already dead.'); svDamage(1e9,'kill',{force:true}); }
+    else if(cmd==='heal'){ SV.hp = SV_MAX; SV.food = 20; SV.sat = 5; SV.exh = 0; SV.burn = 0; SV.dirty = true; chatOk('Health and hunger restored'); }
     else if(cmd==='help' || cmd==='?') cmdHelp();
     else chatErr('Unknown command: /'+cmd+' (try /help)');
   }catch(err){ console.error(err); chatErr('Error: '+err.message); }
@@ -264,6 +269,7 @@ function cmdGamemode(a){
   const m = {survival:'survival', s:'survival', 0:'survival', creative:'creative', c:'creative', 1:'creative'}[(a[0]||'').toLowerCase()];
   if(!m) return chatErr('Usage: /gamemode <survival|creative>');
   WORLD.mode = m; if(m==='survival') P.fly = false;
+  svRefreshMode();
   chatOk('Game mode set to '+(m==='creative' ? 'Creative' : 'Survival')+(m==='creative' ? ' (double-tap Space to fly)' : ''));
 }
 function cmdHelp(){
@@ -273,6 +279,7 @@ function cmdHelp(){
     '/tp <x> <y> <z> [yaw] [pitch]  — teleport (~ = relative, e.g. /tp ~ ~10 ~); /tp <x> <z> = to the surface',
     '/time set <day|noon|night|midnight|sunrise|sunset|ticks> · /time add <ticks> · /time query <daytime|day>',
     '/gamemode <survival|creative>  — changes your game mode',
+    '/kill  — kills you · /heal  — restores health and hunger',
     '/locate biome <biome>  — finds the nearest biome (Tab: list of biomes)',
     '/fill <x1 y1 z1> <x2 y2 z2> <block> [replace [filter]|destroy|keep|hollow|outline]  (max 32768 blocks)'
   ]) addChat(l, '#ffff55');
@@ -300,7 +307,7 @@ function _tpTo(x, y, z){
   let guard = 0;
   while(guard++<400 && y<Y_MAX-2 && (solid(x,y,z) || solid(x,y+1,z))) y = Math.floor(y)+1;
   P.x = P.px = x; P.y = P.py = y; P.z = P.pz = z;
-  P.vx = P.vy = P.vz = 0; P.sx = P.sz = 0; P.onGround = false;
+  P.vx = P.vy = P.vz = 0; P.sx = P.sz = 0; P.onGround = false; SV.fall = 0;
   if(lastPCX!==null) updateVisibleChunks(true);
 }
 function cmdTpPlayer(name){
