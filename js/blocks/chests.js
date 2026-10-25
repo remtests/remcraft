@@ -60,6 +60,7 @@ function doBreak(t){
       if(slots) for(const sl of slots) if(sl.id!==null && sl.n>0) spawnDrop(t.bx+0.5, t.by+0.5, t.bz+0.5, sl.id, sl.n);
       CHESTS.delete(k); CHEST_DIR.delete(k);
     }
+    svExhaust(0.005);   // casser un bloc fatigue un peu
     setB(t.bx,t.by,t.bz,0); markDirty(t.bx,t.by,t.bz,t.bid===20);
     const above = getB(t.bx,t.by+1,t.bz);
     if(above && BLOCKS[above] && BLOCKS[above].plant){   // une plante sans support se détache
