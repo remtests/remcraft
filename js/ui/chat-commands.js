@@ -2,7 +2,7 @@
 
 // ════════════════════════════════════════════════
 // CHAT & COMMANDES : T / Entrée ouvre le chat, « / » ouvre directement une commande
-// /give /tp /time /fill (+ /help). Tab complète, ↑/↓ rappelle l'historique.
+// /give /tp (coordonnées ou joueur) /time /fill (+ /help). Tab complète, ↑/↓ rappelle l'historique.
 // ════════════════════════════════════════════════
 let chatOpen = false;
 const chatEl = document.getElementById('chat'), chatLog = document.getElementById('chat-log'), chatIn = document.getElementById('chat-input'), hintEl = document.getElementById('chat-hint');
@@ -103,6 +103,9 @@ const CMD_SPEC = {
   },
   tp(a,i){
     const D = ['X coordinate (~ = relative to you)','Y coordinate (or Z when you only give X Z: teleports to the surface)','Z coordinate (~ = relative to you)','Yaw in degrees (~ = unchanged)','Pitch in degrees (~ = unchanged)'];
+    const names = [...MP.players.values()].map(p=>p.name);
+    if(i===0) return {tokens:['<x|player>','<y>','<z>','[yaw]','[pitch]'], cur:0, cands: names.concat(_coordC(0)), desc: 'Player to teleport to, or X coordinate (~ = relative to you)'};
+    if(!/^[~\-\d.]/.test(a[0]||'')) return {tokens:['<player>'], cur:-1, cands:[], desc:''};   // /tp <joueur> : pas d'autres arguments
     return {tokens:['<x>','<y>','<z>','[yaw]','[pitch]'], cur: i<5 ? i : -1, cands: i<3 ? _coordC(i) : i<5 ? ['~'] : [], desc: D[i]||''};
   },
   time(a,i){
@@ -266,6 +269,7 @@ function cmdGamemode(a){
 function cmdHelp(){
   for(const l of [
     '/give [@s] <item> [count]  — gives an item or block (Tab: autocomplete)',
+    '/tp <player>  — teleports you to another player (multiplayer)',
     '/tp <x> <y> <z> [yaw] [pitch]  — teleport (~ = relative, e.g. /tp ~ ~10 ~); /tp <x> <z> = to the surface',
     '/time set <day|noon|night|midnight|sunrise|sunset|ticks> · /time add <ticks> · /time query <daytime|day>',
     '/gamemode <survival|creative>  — changes your game mode',
@@ -291,9 +295,34 @@ function _coord(sv, base, center){
   const v = parseFloat(sv); if(isNaN(v)) return NaN;
   return (center && /^-?\d+$/.test(sv)) ? v+0.5 : v;
 }
+function _tpTo(x, y, z){
+  // on ressort du terrain si on a visé l'intérieur d'un bloc
+  let guard = 0;
+  while(guard++<400 && y<Y_MAX-2 && (solid(x,y,z) || solid(x,y+1,z))) y = Math.floor(y)+1;
+  P.x = P.px = x; P.y = P.py = y; P.z = P.pz = z;
+  P.vx = P.vy = P.vz = 0; P.sx = P.sz = 0; P.onGround = false;
+  if(lastPCX!==null) updateVisibleChunks(true);
+}
+function cmdTpPlayer(name){
+  const q = name.toLowerCase();
+  const list = MP.open ? [...MP.players.values()] : [];
+  const t = list.find(p=>p.name.toLowerCase()===q) || list.find(p=>p.name.toLowerCase().startsWith(q));
+  if(!t){
+    if(!MP.open) return chatErr('Unknown target "'+name+'": you are not in a multiplayer game.');
+    if(name.toLowerCase()===String(MP.name).toLowerCase()) return chatErr('You cannot teleport to yourself.');
+    return chatErr('Player not found: '+name);
+  }
+  const d = t.rm || t.rp;   // position lissée si disponible, sinon dernière position reçue
+  if(!d || isNaN(d.x) || isNaN(d.y) || isNaN(d.z)) return chatErr(t.name+' has not sent a position yet.');
+  _tpTo(d.x, d.y, d.z);
+  chatOk('Teleported to '+t.name);
+}
 function cmdTp(a){
   if(a[0] && /^@[sp]$/.test(a[0])) a.shift();
-  if(a.length!==2 && a.length!==3 && a.length!==5) return chatErr('Usage: /tp <x> <y> <z> [yaw] [pitch]   or   /tp <x> <z>');
+  // /tp <joueur> (le pseudo peut contenir des espaces) : tout ce qui ne commence pas par une coordonnée
+  if(a.length && !/^[~\-\d.]/.test(a[0])) return cmdTpPlayer(a.join(' '));
+  if(a.length===1 && MP.open && [...MP.players.values()].some(p=>p.name.toLowerCase()===a[0].toLowerCase())) return cmdTpPlayer(a[0]);   // pseudo commençant par un chiffre
+  if(a.length!==2 && a.length!==3 && a.length!==5) return chatErr('Usage: /tp <player>   or   /tp <x> <y> <z> [yaw] [pitch]   or   /tp <x> <z>');
   let x, y, z;
   if(a.length===2){
     x = _coord(a[0], P.x, true); z = _coord(a[1], P.z, true);
@@ -305,17 +334,12 @@ function cmdTp(a){
   }
   if(Math.abs(x)>3e7 || Math.abs(z)>3e7) return chatErr('Coordinates too far away');
   if(y<=Y_MIN || y>=Y_MAX-1) return chatErr('Height out of the world ('+Y_MIN+' to '+(Y_MAX-2)+')');
-  // on ressort du terrain si on a visé l'intérieur d'un bloc
-  let guard = 0;
-  while(guard++<400 && y<Y_MAX-2 && (solid(x,y,z) || solid(x,y+1,z))) y = Math.floor(y)+1;
-  P.x = P.px = x; P.y = P.py = y; P.z = P.pz = z;
-  P.vx = P.vy = P.vz = 0; P.sx = P.sz = 0; P.onGround = false;
+  _tpTo(x, y, z);
   if(a.length===5){
     const yaw = parseFloat(a[3]), pit = parseFloat(a[4]);
     if(!isNaN(yaw)) P.yaw = Math.PI - yaw*Math.PI/180;
     if(!isNaN(pit)) P.pitch = Math.max(-1.55, Math.min(1.55, -pit*Math.PI/180));
   }
-  if(lastPCX!==null) updateVisibleChunks(true);
   chatOk('Teleported to '+x.toFixed(1)+' '+y.toFixed(1)+' '+z.toFixed(1));
 }
 
