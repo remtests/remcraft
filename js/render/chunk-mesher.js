@@ -230,6 +230,10 @@ function buildChunkMesh(cx,cz){
           if(nb===bid && !isOpq) continue;       // feuilles/verre/eau contre le même bloc
         }
         let tile = F.t===0 ? TILE_TOP[bid] : F.t===1 ? TILE_BOT[bid] : TILE_SIDE[bid];
+        if(bid===28 || bid===29){   // bûche horizontale : extrémités = anneaux ; écorce tournée pour que les fibres suivent l'axe
+          const endFace = bid===28 ? (f===2 || f===3) : (f===4 || f===5);
+          tile = endFace ? TILE_IDX['log_top'] : (bid===29 && f<2) ? TILE_IDX['log_side'] : TILE_IDX['log_side_r'];
+        }
         if(bid===27 && F.t===2){   // coffre : la face avant regarde dans la direction mémorisée à la pose
           const dr = FACE_DIRS[CHEST_DIR.get(wx+','+wy+','+wz) ?? 3];
           if(dr[0]===F.n[0] && dr[1]===F.n[2]) tile = TILE_IDX['chest_front'];
