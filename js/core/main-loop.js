@@ -19,8 +19,9 @@ function loop(ts){
   if(!paused){
     updateLook();
     acc += dt;
-    while(acc >= STEP && n < 5){ physStep(); acc -= STEP; n++; }
+    while(acc >= STEP && n < 5){ if(!SV.dead) physStep(); acc -= STEP; n++; }
     if(n === 5) acc = 0;
+    svUpdate(dt);   // survie : faim, régénération, dégâts, noyade…
   }
 
   updDay(dt);
