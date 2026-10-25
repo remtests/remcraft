@@ -28,18 +28,18 @@
 .slot .k{position:absolute;top:1px;left:3px;font-size:9px;color:#999;}
 
 /* ── BREAK BAR ── */
-#bbar{position:fixed;bottom:74px;left:50%;transform:translateX(-50%);
+#bbar,#ebar{position:fixed;bottom:112px;left:50%;transform:translateX(-50%);
   width:200px;height:8px;background:rgba(0,0,0,.6);border:1px solid #666;
   display:none;z-index:100;border-radius:2px;}
-#bfill{height:100%;background:#f80;width:0%;border-radius:2px;transition:width .05s;}
+#bfill,#efill{height:100%;background:#f80;width:0%;border-radius:2px;transition:width .05s;}
 
 /* ── PAUSE ── */
 #pause{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;
   align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:16px;}
 #pause h2{color:#fff;font-size:32px;letter-spacing:4px;}
-#pause button{background:#555;border:2px solid #777;color:#fff;font-size:16px;
+#pause button,#death button{background:#555;border:2px solid #777;color:#fff;font-size:16px;
   padding:10px 32px;cursor:pointer;font-family:inherit;letter-spacing:1px;}
-#pause button:hover{background:#777;}
+#pause button:hover,#death button:hover{background:#777;}
 
 /* ── CHAT ── */
 #chat{position:fixed;left:8px;bottom:78px;width:min(560px,70vw);z-index:150;font-size:13px;pointer-events:none;}
@@ -74,3 +74,32 @@
 #skin-face{width:28px;height:28px;image-rendering:pixelated;border:2px solid #555;background:#222;}
 .skin-link{background:none;border:none;color:#9ab;font:inherit;font-size:12px;text-decoration:underline;cursor:pointer;padding:0;}
 #skin-reset{display:none;}
+
+/* ── SURVIE : cœurs, faim, bulles ── */
+#hotbar-col{display:flex;flex-direction:column;}
+#sv-status{display:flex;justify-content:space-between;margin:0 2px 5px;}
+#sv-hearts,#sv-food{display:flex;}
+#sv-food{flex-direction:row-reverse;}
+.sv-h,.sv-f{position:relative;width:24px;height:24px;margin-right:-3px;image-rendering:pixelated;background-size:100% 100%;}
+#sv-food .sv-f{margin-right:0;margin-left:-3px;}
+.sv-h{background-image:url(../assets/textures/gui/heart_container.png);}
+.sv-h.blink{background-image:url(../assets/textures/gui/heart_container_blinking.png);}
+.sv-f{background-image:url(../assets/textures/gui/food_empty.png);}
+.sv-h i,.sv-f i{position:absolute;inset:0;background-size:100% 100%;image-rendering:pixelated;}
+.sv-h.full i{background-image:url(../assets/textures/gui/heart_full.png);}
+.sv-h.half i{background-image:url(../assets/textures/gui/heart_half.png);}
+.sv-f.full i{background-image:url(../assets/textures/gui/food_full.png);}
+.sv-f.half i{background-image:url(../assets/textures/gui/food_half.png);}
+#sv-air{display:none;flex-direction:row-reverse;height:16px;margin:0 2px 2px;}
+.sv-b{width:14px;height:14px;margin-left:5px;border-radius:50%;box-sizing:border-box;border:2px solid transparent;}
+.sv-b.on{border-color:#cfeaff;background:rgba(120,190,255,.45);box-shadow:inset 2px 2px 0 rgba(255,255,255,.6);}
+#sv-hurt,#sv-burn{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:150;}
+#sv-hurt{background:radial-gradient(ellipse at center,rgba(200,0,0,0) 35%,rgba(200,0,0,.85) 100%);}
+#sv-burn{background:linear-gradient(to top,rgba(255,120,0,.75),rgba(255,120,0,0) 55%);transition:opacity .2s;}
+#ebar{display:none;}
+#efill{background:#6c3;width:0%;}
+/* ── ÉCRAN DE MORT ── */
+#death{position:fixed;inset:0;z-index:400;display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  background:rgba(110,0,0,.6);color:#fff;text-align:center;}
+#death h1{font-size:56px;margin:0;text-shadow:3px 3px #000;}
+#death p{font-size:20px;margin:0 0 10px;text-shadow:2px 2px #000;}
