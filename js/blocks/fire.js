@@ -11,7 +11,7 @@ const FIRES = new Map(), FIRE_LIST = [];
 let _fMesh = null, _fPos, _fUv, _fTex = null, _fAcc = 0, _fTime = 0, _fLit = 0, _fLT = 0;
 const _fLQ = [];   // relances d'éclairage (étalées dans le temps pour ne pas saccader)
 // probabilité par seconde qu'un bloc voisin d'un feu soit consumé
-const FIRE_BURN  = {6:0.07, 5:0.015, 7:0.025, 11:0.025, 17:0.04, 27:0.025};   // feuilles, bûche, planches, établi, bibliothèque, coffre
+const FIRE_BURN  = {6:0.07, 5:0.015, 28:0.015, 29:0.015, 7:0.025, 11:0.025, 17:0.04, 27:0.025};   // feuilles, bûche, planches, établi, bibliothèque, coffre
 const FIRE_PLANT = {24:1, 25:1, 26:1};                                      // herbe courte, fleurs
 const _FNB = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 const fkey = (x,y,z) => x+','+y+','+z;
@@ -85,7 +85,7 @@ function igniteBlock(x,y,z,id){
   if(y<Y_MIN || y>Y_MAX || FIRE_LIST.length>=MAX_FIRE) return null;
   const k = fkey(x,y,z);
   if(FIRES.has(k)) return null;
-  const dur = id===6 ? 1.2+Math.random()*1.6 : id===5 ? 5+Math.random()*3 : 3+Math.random()*2.5;
+  const dur = id===6 ? 1.2+Math.random()*1.6 : (id===5||id===28||id===29) ? 5+Math.random()*3 : 3+Math.random()*2.5;
   const f = {x,y,z,k,gen:0,block:id,life:dur,off:(Math.random()*FIRE_FRAMES)|0,lit:false,dead:false,idx:FIRE_LIST.length};
   FIRES.set(k,f); FIRE_LIST.push(f);
   if(_fLit < FIRE_MAXLIT){ f.lit = true; _fLit++; LIGHTSRC.set('f:'+k,{x,y,z,lvl:13}); _fLQ.push([x,y,z]); }
