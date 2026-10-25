@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Minecraft Clone</title>
+<link rel="stylesheet" href="css/menu.css">
+<link rel="stylesheet" href="css/loading.css">
+<link rel="stylesheet" href="css/hud.css">
+<link rel="stylesheet" href="css/world-creation.css">
+<link rel="stylesheet" href="css/inventory.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+
+
+<!-- ÉCRAN DE CHARGEMENT -->
+<div id="loadscreen">
+  <div class="mc-logo-load">MINE<span>CRAFT</span></div>
+  <div id="load-bar-wrap">
+    <div id="load-bar"></div>
+  </div>
+  <div id="load-text">Loading world…</div>
+  <div id="load-mojang">Mojang Studios</div>
+</div>
+
+<!-- MENU PRINCIPAL -->
+<div id="overlay">
+  <div id="mc-menu-panel">
+    <div id="mc-logo">MINE<span>CRAFT</span></div>
+    <div id="mc-user"><label for="username-in">Username</label><input id="username-in" type="text" maxlength="16" autocomplete="off" spellcheck="false" oninput="setUsername(this.value,this)" onblur="this.value=MP.name" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()"></div>
+    <button class="mc-btn mc-btn-green" onclick="showCreateWorld()">Play</button>
+    <button class="mc-btn" onclick="mpShow()">Multiplayer (beta)</button>
+    <button class="mc-btn" onclick="document.getElementById('skin-file').click()">Import Skin</button>
+    <input type="file" id="skin-file" accept="image/png" style="display:none" onchange="importSkinFile(this.files[0]); this.value='';">
+    <div id="skin-info">
+      <canvas id="skin-face" width="8" height="8"></canvas>
+      <span id="skin-status"></span>
+      <button id="skin-reset" class="skin-link" onclick="resetSkin()">Reset</button>
+    </div>
+  </div>
+</div>
+
+<div id="mp-panel">
+  <div class="cw-panel">
+    <div class="cw-title">Multiplayer</div>
+    <div class="cw-desc">Play with friends over the internet: share a short game code, nothing else to set up.</div>
+    <div id="mp-choose">
+      <button class="mc-btn" onclick="mpHost()">Host a world</button>
+      <button class="mc-btn" onclick="mpJoin()">Join a world</button>
+    </div>
+    <div id="mp-host" style="display:none">
+      <div class="cw-lab">Your game code — give it to your friends</div>
+      <div id="mp-code">······</div>
+      <button class="mc-btn" onclick="mpCopy()">Copy code</button>
+    </div>
+    <div id="mp-join" style="display:none">
+      <div class="cw-lab">Enter the host's game code</div>
+      <input id="mp-code-in" type="text" maxlength="8" autocomplete="off" spellcheck="false" placeholder="ABC123" onkeydown="event.stopPropagation(); if(event.key==='Enter') mpJoinConnect()" onkeyup="event.stopPropagation()">
+      <button class="mc-btn mc-btn-green" onclick="mpJoinConnect()">Connect</button>
+    </div>
+    <div class="cw-desc" id="mp-status" style="margin-top:10px"></div>
+    <button class="mc-btn mc-btn-green" id="mp-go" style="display:none" onclick="mpHostStart()">Create the world</button>
+    <button class="mc-btn" style="margin-top:6px" onclick="mpBack()">Back</button>
+  </div>
+</div>
+
+<div id="create-world">
+  <div class="cw-panel">
+    <div class="cw-title">Create New World</div>
+    <button class="mc-btn" id="cw-mode" onclick="cwCycle('mode')"></button>
+    <div class="cw-desc" id="cw-mode-desc"></div>
+    <button class="mc-btn" id="cw-type" onclick="cwCycle('type')"></button>
+    <div class="cw-desc" id="cw-type-desc"></div>
+    <div class="cw-lab">Seed for the World Generator</div>
+    <input id="cw-seed" type="text" maxlength="40" autocomplete="off" spellcheck="false" placeholder="Leave blank for a random seed">
+    <button class="mc-btn" id="cw-bonus" onclick="cwCycle('bonus')"></button>
+    <div class="cw-desc" id="cw-bonus-desc"></div>
+    <button class="mc-btn" id="cw-cheats" onclick="cwCycle('cheats')"></button>
+    <div class="cw-desc" id="cw-cheats-desc"></div>
+    <div class="cw-row">
+      <button class="mc-btn mc-btn-green" onclick="createWorld()">Create New World</button>
+      <button class="mc-btn" onclick="cancelCreateWorld()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="pause">
+  <h2>GAME PAUSED</h2>
+  <button onclick="resume()">▶ Back to Game</button>
+  <div style="border-top:1px solid #444;padding-top:12px;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:min(520px,90vw);">
+    <span style="color:#aaa;font-size:13px;letter-spacing:2px;">👤 USERNAME</span>
+    <input id="pause-username" type="text" maxlength="16" autocomplete="off" spellcheck="false" oninput="setUsername(this.value,this)" onblur="this.value=MP.name" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()">
+    <span style="color:#aaa;font-size:13px;letter-spacing:2px;margin-top:6px;">🌐 MULTIPLAYER</span>
+    <div id="pause-mp-info" style="color:#ccc;font-size:12px;text-align:center;"></div>
+    <button id="pause-mp-btn" onclick="mpPauseBtn()">Open to friends</button>
+  </div>
+  <div style="border-top:1px solid #444;padding-top:12px;display:flex;flex-direction:column;align-items:center;gap:8px;">
+    <span style="color:#aaa;font-size:13px;letter-spacing:2px;">⚙ VIDEO SETTINGS</span>
+    <div id="pause-settings"></div>
+    <div id="pause-fps" style="color:#aaa;font-size:12px;">FPS: —</div>
+  </div>
+</div>
+
+<div id="cross"></div>
+<div id="bbar"><div id="bfill"></div></div>
+<div id="hud" style="display:none;flex-direction:column;align-items:center;padding-bottom:8px;position:fixed;bottom:0;left:0;right:0;pointer-events:none;z-index:100;">
+  <div style="display:flex;align-items:flex-end;">
+    <div id="hotbar"></div>
+    <div id="offhand-wrap">
+      <div id="offhand-slot" onclick="offhandClick()" title="Offhand (F)"></div>
+      <span id="offhand-label">F</span>
+    </div>
+  </div>
+</div>
+<div id="chat"><div id="chat-log"></div><div id="chat-hint"></div><input id="chat-input" type="text" maxlength="256" autocomplete="off" spellcheck="false"></div>
+<div id="dbg"></div>
+<div id="clk"></div>
+<div id="drag-item"><canvas id="drag-canvas" width="40" height="40"></canvas><span class="cnt" id="drag-cnt"></span></div>
+<div id="tooltip"></div>
+
+
+
+<!-- INVENTORY UI (E key) -->
+<div class="ui-overlay" id="inv-ui" style="gap:8px;">
+  <div class="mc-panel" style="padding:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="color:#404040;font-size:12px;font-weight:bold;letter-spacing:2px;">INVENTORY</span>
+      <button onclick="closeUI()" style="background:#c6c6c6;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #555;border-bottom:2px solid #555;color:#333;cursor:pointer;font-size:12px;font-weight:bold;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:inherit;">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start;">
+      <div style="display:flex;flex-direction:column;gap:2px;">
+        <div class="mc-slot" id="armor-head"   data-armor="0" title="Helmet"    ><div class="label">🪖</div></div>
+        <div class="mc-slot" id="armor-chest"  data-armor="1" title="Chestplate"  ><div class="label">👕</div></div>
+        <div class="mc-slot" id="armor-legs"   data-armor="2" title="Leggings" ><div class="label">👖</div></div>
+        <div class="mc-slot" id="armor-boots"  data-armor="3" title="Boots"    ><div class="label">👟</div></div>
+      </div>
+      <div style="width:58px;height:118px;background:#8b8b8b;border-top:2px solid #373737;border-left:2px solid #373737;border-right:2px solid #fff;border-bottom:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:36px;color:#5a5a5a;">🧑</div>
+      <div style="display:flex;flex-direction:column;gap:4px;margin-left:6px;">
+        <span class="mc-label">Crafting</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <div id="inv-craft-grid">
+            <div class="mc-slot" id="icg0" data-ci="0"></div>
+            <div class="mc-slot" id="icg1" data-ci="1"></div>
+            <div class="mc-slot" id="icg2" data-ci="2"></div>
+            <div class="mc-slot" id="icg3" data-ci="3"></div>
+          </div>
+          <div class="mc-arrow">➜</div>
+          <div class="mc-out-slot" id="inv-craft-out" onclick="doInvCraft()"></div>
+        </div>
+      </div>
+    </div>
+    <div id="inv-main-grid" class="mc-inv-rows" style="margin-top:4px;"></div>
+    <div style="height:6px;border-top:2px solid #555;border-bottom:2px solid #fff;margin:4px 0;"></div>
+    <div id="inv-hotbar-grid" style="display:flex;gap:2px;"></div>
+  </div>
+  <div class="mc-panel" id="creative-pal" style="display:none;padding:10px;align-self:center;">
+    <div style="color:#404040;font-size:12px;font-weight:bold;letter-spacing:2px;margin-bottom:6px;">CREATIVE INVENTORY</div>
+    <div id="creative-grid" style="display:grid;grid-template-columns:repeat(9,44px);gap:2px;max-height:360px;overflow-y:auto;"></div>
+    <div style="font-size:10px;color:#555;margin-top:6px;">Click an item to take a stack · click while holding one to delete it</div>
+  </div>
+</div>
+
+<!-- CHEST UI -->
+<div class="ui-overlay" id="chest-ui">
+  <div class="mc-panel" style="padding:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="color:#404040;font-size:12px;font-weight:bold;letter-spacing:2px;">CHEST</span>
+      <button onclick="closeUI()" style="background:#c6c6c6;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #555;border-bottom:2px solid #555;color:#333;cursor:pointer;font-size:12px;font-weight:bold;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:inherit;">✕</button>
+    </div>
+    <div id="chest-main" class="mc-inv-rows"></div>
+    <div style="height:6px;border-top:2px solid #555;border-bottom:2px solid #fff;margin:6px 0;"></div>
+    <div id="chest-inv-main" class="mc-inv-rows" style="margin-bottom:4px;"></div>
+    <div style="height:4px;border-top:2px solid #555;border-bottom:2px solid #fff;margin:4px 0;"></div>
+    <div id="chest-inv-hotbar" style="display:flex;gap:2px;"></div>
+  </div>
+</div>
+
+<!-- FURNACE UI -->
+<div class="ui-overlay" id="furnace-ui">
+  <div class="mc-panel" style="padding:10px;min-width:320px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="color:#404040;font-size:12px;font-weight:bold;letter-spacing:2px;">FURNACE</span>
+      <button onclick="closeUI()" style="background:#c6c6c6;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #555;border-bottom:2px solid #555;color:#333;cursor:pointer;font-size:12px;font-weight:bold;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:inherit;">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+      <!-- Colonne gauche : entrée + combustible -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="mc-slot" id="furnace-input" style="width:44px;height:44px;"></div>
+        <div style="font-size:9px;color:#555;text-align:center;">Ingredient</div>
+        <div style="width:36px;height:12px;background:#333;border:1px solid #555;border-radius:2px;position:relative;overflow:hidden;">
+          <div id="furnace-fuel-bar" style="height:100%;background:#f80;width:0%;transition:width 0.3s;"></div>
+        </div>
+        <div class="mc-slot" id="furnace-fuel" style="width:44px;height:44px;"></div>
+        <div style="font-size:9px;color:#555;text-align:center;">Fuel</div>
+      </div>
+      <!-- Flèche progrès -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div style="font-size:9px;color:#666;margin-bottom:2px;" id="furnace-status">Idle</div>
+        <div style="width:50px;height:16px;background:#8b8b8b;border-top:2px solid #373737;border-left:2px solid #373737;border-right:2px solid #fff;border-bottom:2px solid #fff;position:relative;overflow:hidden;">
+          <div id="furnace-prog-bar" style="height:100%;background:#4a7;width:0%;transition:width 0.2s;"></div>
+          <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:14px;pointer-events:none;">➜</span>
+        </div>
+      </div>
+      <!-- Sortie -->
+      <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+        <div class="mc-out-slot" id="furnace-output" onclick="takeFurnaceOutput()" style="width:52px;height:52px;"></div>
+        <div style="font-size:9px;color:#555;">Output</div>
+      </div>
+    </div>
+    <!-- Inventaire dans le four -->
+    <div style="height:4px;border-top:2px solid #555;border-bottom:2px solid #fff;margin:2px 0 8px;"></div>
+    <div id="furnace-inv-main" class="mc-inv-rows" style="margin-bottom:4px;"></div>
+    <div style="height:4px;border-top:2px solid #555;border-bottom:2px solid #fff;margin:4px 0;"></div>
+    <div id="furnace-inv-hotbar" style="display:flex;gap:2px;"></div>
+  </div>
+</div>
+<div class="ui-overlay" id="craft-ui">
+  <div class="mc-panel" style="padding:10px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <span style="color:#404040;font-size:12px;font-weight:bold;letter-spacing:2px;">CRAFTING TABLE</span>
+      <button onclick="closeUI()" style="background:#c6c6c6;border-top:2px solid #fff;border-left:2px solid #fff;border-right:2px solid #555;border-bottom:2px solid #555;color:#333;cursor:pointer;font-size:12px;font-weight:bold;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-family:inherit;">✕</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;">
+      <div id="craft-grid3">
+        <div class="mc-slot" id="cg0" data-ci="0"></div>
+        <div class="mc-slot" id="cg1" data-ci="1"></div>
+        <div class="mc-slot" id="cg2" data-ci="2"></div>
+        <div class="mc-slot" id="cg3" data-ci="3"></div>
+        <div class="mc-slot" id="cg4" data-ci="4"></div>
+        <div class="mc-slot" id="cg5" data-ci="5"></div>
+        <div class="mc-slot" id="cg6" data-ci="6"></div>
+        <div class="mc-slot" id="cg7" data-ci="7"></div>
+        <div class="mc-slot" id="cg8" data-ci="8"></div>
+      </div>
+      <div class="mc-arrow" style="font-size:28px;">➜</div>
+      <div class="mc-out-slot" id="craft-out" onclick="doCraft()" style="width:52px;height:52px;"></div>
+    </div>
+    <div style="height:6px;border-top:2px solid #555;border-bottom:2px solid #fff;margin:4px 0 8px;"></div>
+    <div id="craft-inv-main" class="mc-inv-rows" style="margin-bottom:2px;"></div>
+    <div style="height:4px;border-top:2px solid #555;border-bottom:2px solid #fff;margin:4px 0;"></div>
+    <div id="craft-inv-hotbar" style="display:flex;gap:2px;"></div>
+  </div>
+</div>
+
+<!-- Bibliothèques externes -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+
+<!-- Code du jeu (l'ordre compte : scripts classiques partageant la portée globale) -->
+<script src="js/core/protocol-check.js"></script>
+<script src="js/data/procedural-textures.js"></script>
+<script src="js/data/blocks.js"></script>
+<script src="js/data/recipes.js"></script>
+<script src="js/core/settings.js"></script>
+<script src="js/multiplayer/player-name.js"></script>
+<script src="js/world/world-state.js"></script>
+<script src="js/world/noise.js"></script>
+<script src="js/world/biomes.js"></script>
+<script src="js/world/chunk-generation.js"></script>
+<script src="js/render/scene-atlas-materials.js"></script>
+<script src="js/render/chunk-mesher.js"></script>
+<script src="js/world/chunk-manager.js"></script>
+<script src="js/player/player.js"></script>
+<script src="js/entities/item-drops.js"></script>
+<script src="js/input/input.js"></script>
+<script src="js/ui/chat-commands.js"></script>
+<script src="js/player/physics.js"></script>
+<script src="js/player/raycast-and-breaking.js"></script>
+<script src="js/entities/break-particles.js"></script>
+<script src="js/blocks/chests.js"></script>
+<script src="js/blocks/fire.js"></script>
+<script src="js/render/day-night-cycle.js"></script>
+<script src="js/render/sun-moon.js"></script>
+<script src="js/render/clouds.js"></script>
+<script src="js/ui/inventory-state.js"></script>
+<script src="js/ui/crafting.js"></script>
+<script src="js/ui/hud.js"></script>
+<script src="js/ui/slots.js"></script>
+<script src="js/ui/inventory-rows.js"></script>
+<script src="js/ui/ui-toggle.js"></script>
+<script src="js/blocks/furnace.js"></script>
+<script src="js/ui/settings-ui.js"></script>
+<script src="js/player/skin-and-model.js"></script>
+<script src="js/core/main-loop.js"></script>
+<script src="js/core/world-start.js"></script>
+<script src="js/multiplayer/network.js"></script>
+<script src="js/multiplayer/remote-players.js"></script>
+<script src="js/data/texture-manifest.js"></script>
+<script src="js/entities/armor.js"></script>
+<script src="js/core/texture-loader.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

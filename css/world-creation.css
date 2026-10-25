@@ -1,0 +1,24 @@
+/* ── CREATE NEW WORLD ── */
+#create-world{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:410;color:#fff;
+  background:#000;font-family:'Courier New',monospace;}
+.cw-panel{width:min(420px,92vw);max-height:96vh;overflow-y:auto;display:flex;flex-direction:column;align-items:stretch;}
+.cw-title{text-align:center;font-size:18px;font-weight:bold;letter-spacing:2px;margin-bottom:16px;text-shadow:2px 2px #000;}
+.cw-panel .mc-btn{width:100%;box-sizing:border-box;}
+.cw-desc{font-size:11px;color:#a0a0a0;text-align:center;margin:0 0 8px;min-height:14px;}
+.cw-lab{font-size:12px;color:#a0a0a0;margin:4px 0 4px;}
+#cw-seed{width:100%;box-sizing:border-box;background:#000;border:2px solid #a0a0a0;color:#fff;font:inherit;font-size:14px;padding:9px;outline:none;margin-bottom:10px;}
+#cw-seed:focus{border-color:#fff;}
+#mp-panel{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:410;color:#fff;background:#000;font-family:'Courier New',monospace;}
+#mp-code{font-size:34px;letter-spacing:8px;text-align:center;color:#ffff55;margin:6px 0 10px;text-shadow:2px 2px #000;}
+#mp-code-in{width:100%;box-sizing:border-box;background:#000;border:2px solid #a0a0a0;color:#fff;font:inherit;font-size:22px;text-align:center;letter-spacing:6px;text-transform:uppercase;padding:8px;outline:none;margin-bottom:10px;}
+#mp-code-in:focus{border-color:#fff;}
+#mc-user{display:flex;flex-direction:column;align-items:stretch;width:300px;margin:4px 0 10px;}
+#mc-user label{font-size:12px;color:#a0a0a0;margin-bottom:3px;}
+#mc-user input,#pause-username{background:#000;border:2px solid #a0a0a0;color:#fff;font:inherit;font-size:14px;padding:7px;outline:none;box-sizing:border-box;}
+#mc-user input:focus,#pause-username:focus{border-color:#fff;}
+#pause-username{width:240px;text-align:center;}
+.cw-row{display:flex;gap:6px;margin-top:10px;}
+
+.item-drop{position:fixed;pointer-events:none;z-index:50;transform:translate(-50%,-50%);}
+.item-drop canvas{image-rendering:pixelated;border:1px solid rgba(255,255,255,.3);
+  box-shadow:0 0 6px rgba(255,220,0,.4);}
