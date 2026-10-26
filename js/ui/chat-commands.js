@@ -9,7 +9,7 @@ const chatEl = document.getElementById('chat'), chatLog = document.getElementByI
 const chatHist = []; let chatHistI = 0;
 const CMD_INFO = {
   give:'Gives an item or block', tp:'Teleports you', time:'Sets, adds or reads the time of day',
-  fill:'Fills a region with a block', gamemode:'Changes your game mode', locate:'Finds the nearest biome',
+  fill:'Fills a region with a block', gamemode:'Changes a game mode (survival, creative, spectator)', locate:'Finds the nearest biome',
   kill:'Kills you', heal:'Restores your health and hunger', help:'Lists the commands'
 };
 const CMDS = Object.keys(CMD_INFO);
@@ -123,7 +123,9 @@ const CMD_SPEC = {
     return {tokens:['<x1>','<y1>','<z1>','<x2>','<y2>','<z2>','<block>','[mode]','[filter]'], cur: (i<9 && !off) ? i : -1,
       cands: i<6 ? _coordC(i%3) : i===6 ? blockKeys() : i===7 ? ['replace','destroy','keep','hollow','outline'] : (i===8 && mode==='replace') ? blockKeys() : [], desc: off ? '' : (D[i]||'')};
   },
-  gamemode(a,i){ return {tokens:['<survival|creative>'], cur: i===0?0:-1, cands: i===0?['survival','creative']:[], desc:'Your new game mode'}; },
+  gamemode(a,i){ return {tokens:['<survival|creative|spectator>','[player]'], cur: i<2?i:-1,
+    cands: i===0 ? ['survival','creative','spectator'] : i===1 ? [...MP.players.values()].map(p=>p.name) : [],
+    desc: i===0 ? 'The new game mode (spectator = free flight through blocks)' : i===1 ? 'Player to change (default: you; multiplayer host only)' : ''}; },
   locate(a,i){ return {tokens:['biome','<biome>'], cur: i<2 ? i : -1, cands: i===0 ? ['biome'] : i===1 ? BIOME_IDS : [], desc: i===0 ? 'What to look for' : i===1 ? 'Finds the nearest biome and tells you where it is' : ''}; },
   kill(){ return {tokens:[], cur:-1, cands:[], desc:'Kills you (your items drop)'}; },
   heal(){ return {tokens:[], cur:-1, cands:[], desc:'Restores health and hunger'}; },
@@ -265,12 +267,34 @@ function cmdLocate(a){
   };
   tick();
 }
-function cmdGamemode(a){
-  const m = {survival:'survival', s:'survival', 0:'survival', creative:'creative', c:'creative', 1:'creative'}[(a[0]||'').toLowerCase()];
-  if(!m) return chatErr('Usage: /gamemode <survival|creative>');
-  WORLD.mode = m; if(m==='survival') P.fly = false;
+const GM_ALIAS = {survival:'survival', s:'survival', 0:'survival', creative:'creative', c:'creative', 1:'creative', spectator:'spectator', sp:'spectator', 3:'spectator'};
+const GM_LABEL = {survival:'Survival', creative:'Creative', spectator:'Spectator'};
+// applique un mode de jeu à CE joueur (commande locale ou ordre de l'hôte)
+function applyGameMode(m){
+  const from = WORLD.mode;
+  WORLD.mode = m;
+  if(uiOn) closeUI();
+  P.breaking = null; P.bprog = 0; mldown = false; mrdown = false; SV.eat = null;
+  if(m==='spectator') P.fly = true;
+  else if(m==='survival' || from==='spectator') P.fly = false;
+  P.vy = 0;
   svRefreshMode();
-  chatOk('Game mode set to '+(m==='creative' ? 'Creative' : 'Survival')+(m==='creative' ? ' (double-tap Space to fly)' : ''));
+}
+function cmdGamemode(a){
+  const m = GM_ALIAS[(a[0]||'').toLowerCase()];
+  if(!m) return chatErr('Usage: /gamemode <survival|creative|spectator> [player]');
+  const target = a.slice(1).join(' ').trim();
+  if(!target || /^@[sp]$/.test(target) || target.toLowerCase()===String(MP.name).toLowerCase()){
+    applyGameMode(m);
+    return chatOk('Game mode set to '+GM_LABEL[m]+(m==='creative' ? ' (double-tap Space to fly)' : m==='spectator' ? ' (you fly through blocks, Space/Shift = up/down)' : ''));
+  }
+  if(!MP.open) return chatErr('Unknown player "'+target+'": you are not in a multiplayer game.');
+  if(MP.role!=='host') return chatErr('Only the host can change another player\'s game mode.');
+  const q = target.toLowerCase(), list = [...MP.players.values()];
+  const pl = list.find(p=>p.name.toLowerCase()===q) || list.find(p=>p.name.toLowerCase().startsWith(q));
+  if(!pl) return chatErr('Player not found: '+target);
+  mpOut({t:'gm', to:pl.pid, m});
+  chatOk('Set '+pl.name+'\'s game mode to '+GM_LABEL[m]);
 }
 function cmdHelp(){
   for(const l of [
@@ -278,7 +302,7 @@ function cmdHelp(){
     '/tp <player>  — teleports you to another player (multiplayer)',
     '/tp <x> <y> <z> [yaw] [pitch]  — teleport (~ = relative, e.g. /tp ~ ~10 ~); /tp <x> <z> = to the surface',
     '/time set <day|noon|night|midnight|sunrise|sunset|ticks> · /time add <ticks> · /time query <daytime|day>',
-    '/gamemode <survival|creative>  — changes your game mode',
+    '/gamemode <survival|creative|spectator> [player]  — changes your game mode (or another player\'s, host only)',
     '/kill  — kills you · /heal  — restores health and hunger',
     '/locate biome <biome>  — finds the nearest biome (Tab: list of biomes)',
     '/fill <x1 y1 z1> <x2 y2 z2> <block> [replace [filter]|destroy|keep|hollow|outline]  (max 32768 blocks)'
