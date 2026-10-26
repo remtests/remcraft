@@ -28,7 +28,8 @@ const SV_CAUSE = {
   fall:'fell from a high place', drown:'drowned', starve:'starved to death', cactus:'was pricked to death',
   fire:'burned to death', kill:'died', void:'fell out of the world'
 };
-const svOn = () => WORLD.mode !== 'creative' && !SV.dead;
+const svSafe = () => WORLD.mode==='creative' || WORLD.mode==='spectator';   // modes sans vie ni faim
+const svOn = () => WORLD.mode==='survival' && !SV.dead;
 
 // ── Armure : points de défense (Minecraft Java) ──
 const ARMOR_DEF = { leather:[1,3,2,1], gold:[2,5,3,1], iron:[2,6,5,2], diamond:[3,8,6,3] };
@@ -65,7 +66,7 @@ function svHeal(a){ if(SV.dead) return; const o = SV.hp; SV.hp = Math.min(SV_MAX
 function svDamage(amount, cause, opt){
   opt = opt || {};
   if(SV.dead || amount<=0) return false;
-  if(WORLD.mode==='creative' && !opt.force) return false;
+  if(svSafe() && !opt.force) return false;
   if(!opt.force){
     if(SV.invul>0){            // 0,5 s d'invulnérabilité : seul un coup plus fort que le précédent passe (la différence)
       if(amount <= SV.lastDmg) return false;
@@ -243,15 +244,16 @@ function svBuildHud(){
 }
 function svRefreshMode(force){
   SV.modeShown = WORLD.mode;
-  const creative = WORLD.mode==='creative';
+  const creative = svSafe();
   document.getElementById('sv-status').style.display = creative ? 'none' : 'flex';
+  document.getElementById('hud').style.visibility = (WORLD.mode==='spectator' || SV.dead) ? 'hidden' : '';   // spectateur : pas de barre d'objets
   document.getElementById('sv-air').style.display = 'none';
   if(creative){ SV.eat = null; document.getElementById('ebar').style.display = 'none'; }
   SV.dirty = true;
 }
 function svDraw(force){
   SV.dirty = false;
-  if(WORLD.mode==='creative') return;
+  if(svSafe()) return;
   const hp = Math.ceil(SV.hp), blink = SV.flash>0 && Math.floor(SV.flash/0.1)%2===1;
   const shakeH = hp<=4 && hp>0, shakeF = SV.sat<=0;
   const H = document.getElementById('sv-hearts').children, F = document.getElementById('sv-food').children;
