@@ -14,6 +14,8 @@ function updateLook(){
 // Un pas de physique = 1/60 s (pas fixe → vitesse identique à 30, 60 ou 144 FPS)
 function physStep(){
   P.px=P.x; P.py=P.y; P.pz=P.z;
+  const spec = WORLD.mode==='spectator';   // spectateur : vol permanent, sans collisions
+  if(spec) P.fly = true;
   const cy=Math.cos(P.yaw),sy=Math.sin(P.yaw);
   let mx=0,mz=0;
   if(K.KeyW||K.KeyZ){mx-=sy;mz-=cy;}
@@ -42,7 +44,10 @@ function physStep(){
   if(!moving && Math.abs(P.sx)<1e-4 && Math.abs(P.sz)<1e-4){ P.sx=0; P.sz=0; }
   P.vx = P.sx; P.vz = P.sz;
   if(P.fly){   // vol créatif : Espace monte, Maj descend
-    P.vy = (K.Space?0.2:0) - ((K.ShiftLeft||K.ShiftRight)?0.2:0);
+    // Easing vertical : même lissage exponentiel que l'horizontal (montée/descente progressives, freinage à la relâche)
+    const tvy = (K.Space?0.2:0) - ((K.ShiftLeft||K.ShiftRight)?0.2:0), kv = 1 - Math.exp(-(1/60)/0.12);
+    P.vy += (tvy - P.vy)*kv;
+    if(tvy===0 && Math.abs(P.vy)<1e-3) P.vy = 0;
     P.onGround=false;
   } else if(swim){
     P.vy = Math.max(-0.05, P.vy*0.85 - GRAV*0.25);
@@ -57,13 +62,14 @@ function physStep(){
     if(P.vz!==0 && !sup(P.x, P.z+P.vz)) P.vz = 0;
     if(P.vx!==0 && P.vz!==0 && !sup(P.x+P.vx, P.z+P.vz)) P.vx = P.vz = 0;
   }
-  const _ix=P.vx, _iz=P.vz, _intended=Math.hypot(_ix,_iz);
-  sweepX(P.vx); sweepZ(P.vz); sweepY(P.vy);
+  const _ix=P.vx, _iz=P.vz, _intended=Math.hypot(_ix,_iz), flyDown = P.fly && P.vy<0;
+  if(spec){ P.x+=P.vx; P.z+=P.vz; P.y+=P.vy; }   // noclip : on traverse les blocs
+  else { sweepX(P.vx); sweepZ(P.vz); sweepY(P.vy); }
   P.sx = P.vx; P.sz = P.vz;   // un mur / le sneak coupent aussi la vitesse lissée
   if(P.sprint && _intended>0.004 && Math.hypot(P.x-P.px, P.z-P.pz) < _intended*0.3) P.sprint = false;   // contre un mur : le sprint s'arrête
-  if(P.fly && P.vy<0 && P.onGround) P.fly=false;   // on se pose : le vol s'arrête
+  if(!spec && flyDown && P.onGround) P.fly=false;   // on se pose : le vol s'arrête
   svAfterMove(Math.hypot(P.x-P.px, P.z-P.pz));   // chute et épuisement
-  if(P.y<Y_MIN+2){SV.fall=0;const bm2=getBiomeData(Math.floor(P.x),Math.floor(P.z));P.y=bm2.h+5;P.vy=0;P.py=P.y;}
+  if(!spec && P.y<Y_MIN+2){SV.fall=0;const bm2=getBiomeData(Math.floor(P.x),Math.floor(P.z));P.y=bm2.h+5;P.vy=0;P.py=P.y;}
 }
 
 const solid=(x,y,z)=>{const b=getB(Math.floor(x),Math.floor(y),Math.floor(z));return !!(b&&BLOCKS[b]&&!BLOCKS[b].noCollide);};
