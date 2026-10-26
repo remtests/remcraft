@@ -46,7 +46,7 @@ function createWorld(){
   if(txt===''){ WORLD_SEED = (Math.random()*0x7fffffff)|0; }
   else if(/^-?\d+$/.test(txt)){ WORLD_SEED = parseInt(txt,10)|0; }
   else { let h = 0; for(let i=0;i<txt.length;i++) h = (Math.imul(31,h)+txt.charCodeAt(i))|0; WORLD_SEED = h; }   // comme String.hashCode() de Java
-  WORLD.type = CW.type; WORLD.mode = CW.mode; WORLD.bonus = CW.bonus; WORLD.cheats = CW.cheats;
+  WORLD.type = CW.type; WORLD.mode = WORLD.baseMode = CW.mode; WORLD.bonus = CW.bonus; WORLD.cheats = CW.cheats;
   BIOME_SCALE = CW.type==='large' ? 4 : 1;
   resetNoiseCaches();
   document.getElementById('create-world').style.display = 'none';
