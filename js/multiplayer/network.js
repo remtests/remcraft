@@ -150,7 +150,7 @@ function mpMakeHello(){
   const chests = [], cd = [];
   for(const [k,s] of CHESTS) chests.push([k, s.map(x=>[x.id, x.n])]);
   for(const [k,d] of CHEST_DIR) cd.push([k, d]);
-  return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:WORLD.mode, sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount,
+  return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount,
     edits:[...MP.edits.values()], cd, chests,
     fire:FIRE_LIST.map(f=>[f.x, f.y, f.z, f.gen||0, f.block||0]),
     drops:drops.filter(d=>!d.collecting).map(d=>[d.uid, d.wx, d.wy, d.wz, d.id, d.n])};
@@ -160,7 +160,7 @@ function mpHello(){ for(const c of MP.conns.values()) if(c.ready && !c.hello) mp
 function mpOnHello(m){
   if(MP.role!=='client' || MP.started || gameOn) return;
   MP.started = true;
-  WORLD_SEED = m.seed|0; WORLD.type = m.type; WORLD.mode = m.mode; WORLD.bonus = false; WORLD.cheats = false;
+  WORLD_SEED = m.seed|0; WORLD.type = m.type; WORLD.mode = WORLD.baseMode = m.mode; WORLD.bonus = false; WORLD.cheats = false;
   BIOME_SCALE = m.type==='large' ? 4 : 1; resetNoiseCaches();
   MP.spawn = {sx:m.sx|0, sz:m.sz|0};
   for(const [k,d] of (m.cd||[])) CHEST_DIR.set(k, d);
@@ -185,6 +185,9 @@ function mpRecvGame(m){
     case 'dk': { const i = drops.findIndex(d=>d.uid===m.u); if(i>=0) removeDrop(i); break; }
     case 'du': { const d = drops.find(d=>d.uid===m.u); if(d) d.n = m.n|0; break; }
     case 'ch': mpSetChest(m.k, m.s); break;
+    case 'gm':   // l'hôte change le mode de jeu d'un joueur : seul un message de l'hôte (H) destiné à ce joueur est accepté
+      if(m.f==='H' && m.to===MP.pid && GM_LABEL[m.m]){ applyGameMode(m.m); addChat('Your game mode has been updated to '+GM_LABEL[m.m], '#ffff55'); }
+      break;
   }
 }
 
