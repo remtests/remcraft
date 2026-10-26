@@ -128,7 +128,7 @@ function updateDrops(dt){
     if(d.age>0.5){
       const dist=Math.hypot(d.wx-P.x, d.wy-(P.y+0.9), d.wz-P.z);
       // FIX : on ne ramasse que s'il reste de la place (avant, l'objet disparaissait si l'inventaire était plein)
-      if(dist<1.8 && invRoom(d.id)){
+      if(dist<1.8 && WORLD.mode!=='spectator' && !SV.dead && invRoom(d.id)){
         const rest = addInv(d.id, d.n); drawHotbar();
         if(rest>0){ d.n = rest; if(MP.open) mpOut({t:'du', u:d.uid, n:rest}); }   // inventaire presque plein : on garde le reste au sol
         else {
