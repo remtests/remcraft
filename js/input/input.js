@@ -37,6 +37,7 @@ addEventListener('keydown',e=>{
     if(tf-(window._lastFwd||0) < 300 && !(K.ShiftLeft||K.ShiftRight)) P.sprint = true;
     window._lastFwd = tf;
   }
+  if(WORLD.mode==='spectator' && (e.code==='KeyQ'||e.code==='KeyE'||e.code==='KeyF')) return;   // pas d'inventaire ni de lancer en spectateur
   if(e.code==='KeyQ' && !e.repeat && gameOn && !uiOn && !paused){ e.preventDefault(); dropHeld(e.ctrlKey); return; }   // touche « A » en AZERTY : jeter (Ctrl = toute la pile)
   if(e.code==='KeyE'){toggleUI('inv');return;}
   if(e.code==='KeyF'){swapOffhand();return;}
@@ -56,7 +57,7 @@ addEventListener('mousedown',e=>{
   if(!document.pointerLockElement&&!uiOn&&!paused){
     lockPtr(); return;
   }
-  if(document.pointerLockElement&&!uiOn){
+  if(document.pointerLockElement&&!uiOn&&WORLD.mode!=='spectator'){
     if(e.button===0 && !punchFire()) mldown=true;
     if(e.button===2){
       mrdown = true;
