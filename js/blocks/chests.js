@@ -41,6 +41,11 @@ function chestQuickMove(type, idx){
   drawHotbar(); redrawOpenUI();
 }
 
+const LEAF_APPLE_CHANCE = 0.07;   // 7 % de chances qu'un bloc de feuillage lâche une pomme
+function leafAppleDrop(x, y, z){
+  if(Math.random() < LEAF_APPLE_CHANCE) spawnDrop(x+0.5, y+0.5, z+0.5, 'apple');
+}
+
 function doBreak(t){
   if(!t){P.breaking=null;P.bprog=0;_hideBreak();return;}
   const creative = WORLD.mode==='creative';
@@ -73,6 +78,7 @@ function doBreak(t){
     }
     const dropId = (bd.drop!==undefined) ? bd.drop : t.bid;
     if(dropId !== null && !creative) spawnDrop(t.bx+0.5, t.by+0.5, t.bz+0.5, dropId);   // créatif : pas d'objet au sol
+    if(t.bid===6 && !creative) leafAppleDrop(t.bx, t.by, t.bz);   // feuillage : petite chance de pomme
     if(creative) P.breakCool = 0.22;
     P.breaking=null; P.bprog=0;
     _hideBreak();
