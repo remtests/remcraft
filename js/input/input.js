@@ -58,7 +58,10 @@ addEventListener('mousedown',e=>{
     lockPtr(); return;
   }
   if(document.pointerLockElement&&!uiOn&&WORLD.mode!=='spectator'){
-    if(e.button===0 && !punchFire()) mldown=true;
+    if(e.button===0 && !punchFire()){
+      mldown=true;
+      P.breakCool=0; doBreak(castRay());   // un nouveau clic agit tout de suite : pas d'attente de la prochaine frame ni du délai « maintien » du créatif
+    }
     if(e.button===2){
       mrdown = true;
       const tt = castRay(), bd = tt && BLOCKS[tt.bid], inter = bd && (bd.isCraft || bd.isFurnace || bd.isChest);   // un bloc interactif prime sur manger
