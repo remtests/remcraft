@@ -107,3 +107,34 @@ function warpedNoise2d(x,z,seed=0){
   const oz = perlin2(x*0.5+8.1, z*0.5+2.4, (seed+2) & 0x7fffffff) * 1.5;
   return noise2d(x+ox, z+oz, seed);
 }
+
+// ══════════════════════════════════════════════════════════
+// BRUITS DE RELIEF — pour croiser plusieurs familles de bruit (génération de terrain)
+// ══════════════════════════════════════════════════════════
+// « Ridged multifractal » (Musgrave) : crêtes vives là où le bruit de Perlin passe par zéro.
+// Chaque octave est pondérée par la précédente → arêtes nettes en altitude, fonds plus calmes. Sortie ≈ 0..1.
+function ridged2(x,z,octs,seed=0,lac=2.1,gain=2.0){
+  let v=0, a=1, f=1, w=1, m=0;
+  for(let i=0;i<octs;i++){
+    let s = 1 - Math.abs(perlin2(x*f, z*f, (seed + i*61) & 0x7fffffff));
+    s *= s; s *= w;
+    w = s*gain; if(w>1) w=1;
+    v += s*a; m += a; a *= 0.5; f *= lac;
+  }
+  return v/m;
+}
+// Bruit cellulaire (Voronoï) : distance au point le plus proche (_vF1, en unités de cellule) et
+// hauteur aléatoire propre à la cellule (_vH, 0..1) → sert à planter des pics en forme de cône.
+let _vF1 = 0, _vH = 0;
+function voronoi2(x,z,seed=0){
+  const ix = Math.floor(x), iz = Math.floor(z);
+  let best = 9, bh = 0;
+  for(let dx=-1;dx<=1;dx++) for(let dz=-1;dz<=1;dz++){
+    const cx = ix+dx, cz = iz+dz;
+    const px = cx + hash2(cx,cz,seed), pz = cz + hash2(cx,cz,seed+1);
+    const ex = px-x, ez = pz-z, d = ex*ex + ez*ez;
+    if(d < best){ best = d; bh = hash2(cx,cz,seed+2); }
+  }
+  _vF1 = Math.sqrt(best); _vH = bh;
+  return _vF1;
+}
