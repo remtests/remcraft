@@ -19,6 +19,111 @@ function tri(a,gx,gz,gy,fx,fz,fy){
 }
 function minAbs(lo,hi){ return (lo<=0&&hi>=0) ? 0 : Math.min(Math.abs(lo),Math.abs(hi)); }
 
+// ══════════════════════════════════════════════════════════
+// MINERAIS — FILONS À RÉPARTITION GAUSSIENNE EN HAUTEUR
+// ══════════════════════════════════════════════════════════
+// Chaque filon est tiré à partir d'une « tentative » : (x,z) aléatoire dans un chunk source, y tiré selon une
+// ou plusieurs gaussiennes {m: optimum, s: écart-type, w: poids} tronquées à [lo,hi]. Le filon est une chaîne
+// de petites ellipsoïdes (comme Minecraft). Il est déterministe par chunk source : un chunk génère donc aussi
+// les morceaux des filons voisins qui le traversent (pas de coupure aux bordures).
+// Le monde fait y = −60 … 89 : les plages Minecraft dépassant 89 sont ramenées au haut du monde.
+//   n : filons par chunk · size : blocs par filon (±) · lo/hi : plage totale
+// Ordre = priorité (le plus rare d'abord : un filon ne remplace que la pierre encore intacte).
+const ORES = [
+  { id:16, name:'diamant', n:1.4,  size:6,  lo:-59, hi:16, g:[{m:-58, s:13, w:1}] },
+  { id:15, name:'or',      n:2.4, size:8,  lo:-59, hi:32, g:[{m:-16, s:14, w:1}] },
+  { id:12, name:'fer',     n:9,   size:9,  lo:-59, hi:89, g:[{m:16, s:22, w:0.6}, {m:76, s:11, w:0.4}] },   // cavernes (16) + sommets des montagnes
+  { id:13, name:'charbon', n:36,  size:10, lo:0,   hi:89, g:[{m:95, s:75, w:1}] },                            // jamais sous y = 0
+];
+// Badlands : or « en masse ». La surface y est trop basse pour la plage Minecraft (32…256) → on la prend relative à la surface.
+const BAD_GOLD = { id:15, n:5, size:8, depthMean:10, sigma:6 };
+
+function mkRng(seed){
+  let a = seed|0;
+  return function(){
+    a = (a + 0x6D2B79F5)|0;
+    let t = Math.imul(a ^ (a>>>15), 1|a);
+    t = (t + Math.imul(t ^ (t>>>7), 61|t)) ^ t;
+    return ((t ^ (t>>>14))>>>0)/4294967296;
+  };
+}
+function gaussRnd(r){ return Math.sqrt(-2*Math.log(1-r()))*Math.cos(6.283185307179586*r()); }
+// hauteur d'un filon : gaussienne(s) tronquée(s) à [lo,hi] (NaN si 8 tirages hors plage)
+function oreY(o, r){
+  for(let t=0;t<8;t++){
+    let u = r(), g = o.g[o.g.length-1];
+    for(const q of o.g){ if(u < q.w){ g = q; break; } u -= q.w; }
+    const y = Math.round(g.m + g.s*gaussRnd(r));
+    if(y >= o.lo && y <= o.hi) return y;
+  }
+  return NaN;
+}
+// remplit un filon (chaîne d'ellipsoïdes le long d'un segment) dans les blocs hôtes autorisés du chunk
+function fillVein(data, x0, z0, r, ox, oy, oz, size, id, anyStrata, ylo, yhi){
+  const ang = r()*Math.PI, sx = Math.sin(ang)*size/8, sz = Math.cos(ang)*size/8;
+  const y1 = oy + r()*3 - 2, y2 = oy + r()*3 - 2;
+  for(let i=0;i<size;i++){
+    const t = i/size;
+    const cx = ox + sx*(1-2*t), cz = oz + sz*(1-2*t), cy = y1 + (y2-y1)*t;
+    const rad = ((Math.sin(Math.PI*t)+1)*r()*size/16 + 1)*0.5 + 0.35;   // +0.35 : boules qui se recouvrent → filons d'un seul tenant, peu de blocs isolés
+    const xa = Math.floor(cx-rad), xb = Math.floor(cx+rad);
+    const ya = Math.floor(cy-rad), yb = Math.floor(cy+rad);
+    const za = Math.floor(cz-rad), zb = Math.floor(cz+rad);
+    for(let x=xa;x<=xb;x++){
+      const lx = x - x0; if(lx<0 || lx>=CSIZ) continue;
+      const dx = (x+0.5-cx)/rad; if(dx*dx >= 1) continue;
+      for(let z=za;z<=zb;z++){
+        const lz = z - z0; if(lz<0 || lz>=CSIZ) continue;
+        const dz = (z+0.5-cz)/rad; if(dx*dx+dz*dz >= 1) continue;
+        const base = (lx*CSIZ+lz)*CHH;
+        for(let y=ya;y<=yb;y++){
+          if(y < ylo || y > yhi) continue;   // plage totale respectée strictement (ex. charbon : jamais sous y = 0)
+          const ly = y + Y_OFF; if(ly <= BED_LY || ly > Y_MAX+Y_OFF) continue;
+          const dy = (y+0.5-cy)/rad; if(dx*dx+dz*dz+dy*dy >= 1) continue;
+          const b = data[base+ly];
+          if(b === 3 || (anyStrata && (b === 4 || b === 9))) data[base+ly] = id;
+        }
+      }
+    }
+  }
+}
+function placeOres(data, cx, cz, SD, topH){
+  const x0 = cx*CSIZ, z0 = cz*CSIZ, M = 9;   // marge : un filon dépasse de ~5 blocs de son origine
+  for(let oi=0; oi<ORES.length; oi++){
+    const o = ORES[oi];
+    for(let dx=-1;dx<=1;dx++) for(let dz=-1;dz<=1;dz++){
+      const scx = cx+dx, scz = cz+dz;
+      const rc = mkRng(hash32(scx, scz, (SD ^ (0x4f1b + oi*7919))|0));
+      let nv = Math.floor(o.n); if(rc() < o.n - nv) nv++;
+      for(let v=0; v<nv; v++){
+        const r = mkRng(hash32(scx*131+v, scz*137+oi, (SD ^ 0x2c9d)|0));   // flux indépendant par filon
+        const ox = scx*CSIZ + ((r()*CSIZ)|0), oz = scz*CSIZ + ((r()*CSIZ)|0);
+        const oy = oreY(o, r);
+        const size = Math.max(3, Math.round(o.size*(0.6 + 0.8*r())));
+        if(oy !== oy || oy > topH+6 || ox < x0-M || ox >= x0+CSIZ+M || oz < z0-M || oz >= z0+CSIZ+M) continue;
+        fillVein(data, x0, z0, r, ox, oy, oz, size, o.id, false, o.lo, o.hi);
+      }
+    }
+  }
+  // or des Badlands (seulement si un badlands est proche : test bon marché sur le centre des 9 chunks)
+  let bad = false;
+  for(let dx=-1;dx<=1 && !bad;dx++) for(let dz=-1;dz<=1;dz++) if(rawBiomeType((cx+dx)*CSIZ+8, (cz+dz)*CSIZ+8) === 10){ bad = true; break; }
+  if(!bad) return;
+  for(let dx=-1;dx<=1;dx++) for(let dz=-1;dz<=1;dz++){
+    const scx = cx+dx, scz = cz+dz;
+    for(let v=0; v<BAD_GOLD.n; v++){
+      const r = mkRng(hash32(scx*131+v, scz*137+77, (SD ^ 0x6b1f)|0));
+      const ox = scx*CSIZ + ((r()*CSIZ)|0), oz = scz*CSIZ + ((r()*CSIZ)|0);
+      const size = Math.max(3, Math.round(BAD_GOLD.size*(0.6 + 0.8*r())));
+      const g = gaussRnd(r);
+      if(ox < x0-M || ox >= x0+CSIZ+M || oz < z0-M || oz >= z0+CSIZ+M) continue;
+      colInfo(ox, oz);
+      if(_ct !== 10) continue;
+      fillVein(data, x0, z0, r, ox, Math.round(_ch - BAD_GOLD.depthMean + g*BAD_GOLD.sigma), oz, size, BAD_GOLD.id, true, Y_MIN, Y_MAX);
+    }
+  }
+}
+
 function dirtDepthOf(type, h){ return (type===2 && h>38) || (type===9 && h>42) ? 1 : (type===10 ? 10 : 4); }
 
 function generateChunk(cx,cz){
@@ -104,15 +209,7 @@ function generateChunk(cx,cz){
       const wy = ly - Y_OFF;
       let block = 3;
       const depth = h - wy;
-      if(depth > 3){
-        const hv = hash32(wx*3+wy, wz*5+wy, 17^SD);          // 1 seul hachage : minerais (haut) + gravier (bas)
-        const rng = (hv>>>0)/4294967296;
-        if     (rng < 0.015)               block = 13; // charbon
-        else if(rng < 0.026 && depth > 8)  block = 12; // fer
-        else if(rng < 0.032 && depth > 24) block = 15; // or
-        else if(rng < 0.036 && depth > 38) block = 16; // diamant
-        else if(depth > 5 && ((Math.imul(hv,-1640531535)>>>8)/16777216) < 0.035) block = 9; // gravier
-      }
+      if(depth > 5 && ((Math.imul(hash32(wx*3+wy, wz*5+wy, 17^SD),-1640531535)>>>8)/16777216) < 0.035) block = 9; // poches de gravier (les minerais sont des filons : voir placeOres)
       data[base+ly] = block;
     }
     // pente locale : sur les versants raides des montagnes / collines venteuses, la roche affleure (pas d'herbe accrochée à la falaise)
@@ -137,6 +234,10 @@ function generateChunk(cx,cz){
     else            sb = 1;
     data[base+surfLy] = sb;
   }
+
+  // 3b) minerais en filons (répartition gaussienne en hauteur)
+  let topH = -99; for(let i=0;i<256;i++) if(_hArr[i] > topH) topH = _hArr[i];   // aucun hôte au-dessus du relief → rejet rapide
+  placeOres(data, cx, cz, SD, topH);
 
   // 4) arbres — passe avec marge de 2 blocs : les canopées ne sont plus coupées aux bordures de chunk
   for(let lx=-2;lx<CSIZ+2;lx++) for(let lz=-2;lz<CSIZ+2;lz++){
