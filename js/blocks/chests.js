@@ -50,7 +50,7 @@ function doBreak(t){
   if(!t){P.breaking=null;P.bprog=0;_hideBreak();return;}
   const creative = WORLD.mode==='creative';
   const bd=BLOCKS[t.bid]; if(!bd||(bd.hard===999 && !creative)) return;
-  if(P.breakCool>0){ P.breakCool-=frameDt; return; }   // créatif : un bloc toutes les ~0,22 s en maintenant le clic
+  if(P.breakCool>0) return;   // créatif : un bloc toutes les ~0,22 s en maintenant le clic (le délai s'écoule dans la boucle principale ; un nouveau clic l'ignore)
   if(!P.breaking||P.breaking.bx!==t.bx||P.breaking.by!==t.by||P.breaking.bz!==t.bz)
     {P.breaking={...t};P.bprog=0;}
   const speed = getBreakSpeed(bd);
