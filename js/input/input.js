@@ -72,8 +72,7 @@ addEventListener('mousedown',e=>{
 });
 addEventListener('mouseup',e=>{
   if(e.button===2) mrdown=false;
-  if(e.button===0){mldown=false;P.breaking=null;P.bprog=0;_hideBreak();
-    document.getElementById('bbar').style.display='none';}
+  if(e.button===0){mldown=false;P.breaking=null;P.bprog=0;_hideBreak();}
 });
 addEventListener('contextmenu',e=>e.preventDefault());
 addEventListener('wheel',e=>{
