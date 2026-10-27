@@ -57,7 +57,7 @@ function drawInv(){
   drawCreativePalette();
   ['armor-head','armor-chest','armor-legs','armor-boots'].forEach((id,i)=>{   // slots d'armure réels (avant : simples décors)
     const old = document.getElementById(id); if(!old) return;
-    const el = makeSlotEl('armor', i); el.id = id; el.title = old.title; el.dataset.ph = ['🪖','👕','👖','👟'][i];
+    const el = makeSlotEl('armor', i); el.id = id; el.title = old.title;
     old.replaceWith(el);
   });
   buildInvRows(
@@ -74,6 +74,7 @@ function drawInv(){
       if(item.n>1){const s=document.createElement('span');s.className='sc';s.textContent=item.n;el.appendChild(s);}
     }
   }
+  invPreviewStart();   // aperçu 3D du joueur (idempotent)
   const out=document.getElementById('inv-craft-out'); out.innerHTML='';
   if(invCraftResult){
     out.appendChild(mkCanvas(invCraftResult.r,34));
