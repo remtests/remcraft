@@ -55,8 +55,6 @@ function doBreak(t){
     {P.breaking={...t};P.bprog=0;}
   const speed = getBreakSpeed(bd);
   P.bprog += (creative || bd.hard===0) ? 1 : speed * 1.5 / bd.hard * frameDt;
-  document.getElementById('bfill').style.width=(P.bprog*100)+'%';
-  document.getElementById('bbar').style.display='block';
   _showBreak(t.bx, t.by, t.bz, Math.floor(P.bprog * 10));
   if(P.bprog>=1){
     spawnBreakParticles(t.bx,t.by,t.bz,t.bid);
@@ -82,7 +80,6 @@ function doBreak(t){
     if(creative) P.breakCool = 0.22;
     P.breaking=null; P.bprog=0;
     _hideBreak();
-    document.getElementById('bbar').style.display='none';
     drawHotbar();
   }
 }
