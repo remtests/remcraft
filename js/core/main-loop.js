@@ -36,6 +36,7 @@ function loop(ts){
 
   const t = paused ? null : castRay(); updHL(t);
   if(!paused){
+    if(P.breakCool>0) P.breakCool-=dt;   // le délai entre deux blocs s'écoule en temps réel, bouton relâché ou non
     if(mldown&&!uiOn) doBreak(t);
     else if(!mldown){P.breaking=null;P.bprog=0;}
   }
