@@ -9,6 +9,7 @@ const CN = 5, CNY = 46, CCY = 45;
 const _c1 = new Float32Array(CN*CN*CNY), _c2 = new Float32Array(CN*CN*CNY), _cb = new Float32Array(CN*CN*CNY);
 const _maybe = new Uint8Array(16*CCY);
 const _hArr = new Int16Array(256), _tArr = new Uint8Array(256);
+const _hPad = new Int16Array(18*18);   // hauteurs avec 1 colonne de marge (pente calculée sans coupure aux bords de chunk)
 function tri(a,gx,gz,gy,fx,fz,fy){
   const i = (gx*CN+gz)*CNY+gy, sx = CN*CNY, sz = CNY;
   const x00=a[i]+(a[i+1]-a[i])*fy,           x01=a[i+sz]+(a[i+sz+1]-a[i+sz])*fy;
@@ -40,9 +41,11 @@ function generateChunk(cx,cz){
 
   // 1) hauteur + biome de chaque colonne
   let maxStone = 0;
-  for(let lx=0;lx<CSIZ;lx++) for(let lz=0;lz<CSIZ;lz++){
-    const col = lx*CSIZ+lz;
+  for(let lx=-1;lx<=CSIZ;lx++) for(let lz=-1;lz<=CSIZ;lz++){
     colInfo(x0+lx, z0+lz);
+    _hPad[(lx+1)*18+lz+1] = _ch;
+    if(lx<0||lx>=CSIZ||lz<0||lz>=CSIZ) continue;
+    const col = lx*CSIZ+lz;
     _hArr[col] = _ch; _tArr[col] = _ct; meta.bio[col] = _ct;
     const dd = dirtDepthOf(_ct, _ch);
     const st = _ch + Y_OFF - dd;
@@ -112,14 +115,22 @@ function generateChunk(cx,cz){
       }
       data[base+ly] = block;
     }
-    const sub = ((type===2 && h>38) || (type===9 && h>42)) ? 3 : (type===3 ? 4 : 2);
+    // pente locale : sur les versants raides des montagnes / collines venteuses, la roche affleure (pas d'herbe accrochée à la falaise)
+    let steep = false;
+    if(type===2 || type===9){
+      const hp = (lx+1)*18+lz+1;
+      const sl = Math.max(Math.abs(h-_hPad[hp-18]), Math.abs(h-_hPad[hp+18]), Math.abs(h-_hPad[hp-1]), Math.abs(h-_hPad[hp+1]));
+      steep = sl >= (type===2 ? 3 : 4);
+    }
+    const sub = (steep || (type===2 && h>38) || (type===9 && h>42)) ? 3 : (type===3 ? 4 : 2);
     if(type === 10){   // Badlands : strates horizontales
       for(let ly=Math.max(BED_LY+1,stoneTop); ly<surfLy; ly++) data[base+ly] = BAD_BAND[(((ly-Y_OFF)%6)+6)%6];
     } else for(let ly=Math.max(BED_LY+1,stoneTop); ly<surfLy; ly++) data[base+ly] = sub;
     let sb;
     if(type === 3 || type === 10) sb = 4;   // sable du désert / des badlands
-    else if(type === 9){ const pn = perlin2(wx*0.07, wz*0.07, SD^717); sb = (h>44 || pn>0.35) ? 3 : (pn>0.2 ? 9 : 1); }   // collines : plaques de pierre / gravier
+    else if(type === 9){ const pn = perlin2(wx*0.07, wz*0.07, SD^717); sb = (steep || h>44 || pn>0.35) ? 3 : (pn>0.2 ? 9 : 1); }   // collines : plaques de pierre / gravier
     else if(type !== 2) sb = 1;
+    else if(steep) sb = 3;
     else if(h > 62) sb = 9;
     else if(h > 45) sb = 3;
     else if(h > 32) sb = 8;
