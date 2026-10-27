@@ -137,12 +137,12 @@
     </div>
     <div style="display:flex;gap:8px;margin-bottom:6px;align-items:flex-start;">
       <div style="display:flex;flex-direction:column;gap:2px;">
-        <div class="mc-slot" id="armor-head"   data-armor="0" title="Helmet"    ><div class="label">🪖</div></div>
-        <div class="mc-slot" id="armor-chest"  data-armor="1" title="Chestplate"  ><div class="label">👕</div></div>
-        <div class="mc-slot" id="armor-legs"   data-armor="2" title="Leggings" ><div class="label">👖</div></div>
-        <div class="mc-slot" id="armor-boots"  data-armor="3" title="Boots"    ><div class="label">👟</div></div>
+        <div class="mc-slot" id="armor-head"   data-armor="0" title="Helmet"    ></div>
+        <div class="mc-slot" id="armor-chest"  data-armor="1" title="Chestplate"  ></div>
+        <div class="mc-slot" id="armor-legs"   data-armor="2" title="Leggings" ></div>
+        <div class="mc-slot" id="armor-boots"  data-armor="3" title="Boots"    ></div>
       </div>
-      <div style="width:58px;height:118px;background:#8b8b8b;border-top:2px solid #373737;border-left:2px solid #373737;border-right:2px solid #fff;border-bottom:2px solid #fff;display:flex;align-items:center;justify-content:center;font-size:36px;color:#5a5a5a;">🧑</div>
+      <div class="mc-preview"><canvas id="inv-preview"></canvas></div>
       <div style="display:flex;flex-direction:column;gap:4px;margin-left:6px;">
         <span class="mc-label">Crafting</span>
         <div style="display:flex;align-items:center;gap:4px;">
@@ -290,6 +290,7 @@
 <script src="js/blocks/furnace.js"></script>
 <script src="js/ui/settings-ui.js"></script>
 <script src="js/player/skin-and-model.js"></script>
+<script src="js/ui/inventory-preview.js"></script>
 <script src="js/core/main-loop.js"></script>
 <script src="js/core/world-start.js"></script>
 <script src="js/multiplayer/network.js"></script>
