@@ -91,7 +91,7 @@ function svDie(cause){
   for(const k in K) K[k] = false;
   mldown = false; mrdown = false; P.breaking = null; P.bprog = 0; P.sprint = false;
   if(typeof _hideBreak==='function') _hideBreak();
-  for(const id of ['bbar','ebar']) document.getElementById(id).style.display = 'none';
+  document.getElementById('ebar').style.display = 'none';
   if(uiOn) closeUI();               // la grille de craft rend d'abord ses objets à l'inventaire
   // l'inventaire, l'armure et la main secondaire tombent au sol
   const toss = it => { if(it && it.id!==null && it.n>0) spawnDrop(P.x, P.y+1, P.z, it.id, it.n, {vx:(Math.random()-0.5)*6, vy:3+Math.random()*3, vz:(Math.random()-0.5)*6, age:-0.6}); if(it){ it.id = null; it.n = 0; } };
