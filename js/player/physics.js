@@ -69,7 +69,9 @@ function physStep(){
   if(P.sprint && _intended>0.004 && Math.hypot(P.x-P.px, P.z-P.pz) < _intended*0.3) P.sprint = false;   // contre un mur : le sprint s'arrête
   if(!spec && flyDown && P.onGround) P.fly=false;   // on se pose : le vol s'arrête
   svAfterMove(Math.hypot(P.x-P.px, P.z-P.pz));   // chute et épuisement
-  if(!spec && P.y<Y_MIN+2){SV.fall=0;const bm2=getBiomeData(Math.floor(P.x),Math.floor(P.z));P.y=bm2.h+5;P.vy=0;P.py=P.y;}
+  // Plus de téléportation à la surface : avant, se tenir sur la bedrock (y ≈ −59) suffisait à déclencher le « sauvetage ».
+  // Seul le vide, loin sous le monde, est mortel (survie) ; en créatif on peut voler pour remonter.
+  if(!spec && P.y < Y_MIN-64 && svOn()) svDamage(4,'void',{force:true});
 }
 
 const solid=(x,y,z)=>{const b=getB(Math.floor(x),Math.floor(y),Math.floor(z));return !!(b&&BLOCKS[b]&&!BLOCKS[b].noCollide);};
