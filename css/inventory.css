@@ -85,6 +85,13 @@
 /* Armor slots */
 .mc-armor{display:flex;flex-direction:column;gap:2px;}
 
+/* Aperçu 3D du joueur (inventaire) : même hauteur que les 4 slots d'armure (4×36 + 3×2 = 150) */
+.mc-preview{width:108px;height:150px;box-sizing:border-box;flex:none;overflow:hidden;
+  background:#8b8b8b;
+  border-top:2px solid #373737;border-left:2px solid #373737;
+  border-right:2px solid #fff;border-bottom:2px solid #fff;}
+.mc-preview canvas{display:block;width:100%;height:100%;}
+
 /* Floating drag item */
 #drag-item{position:fixed;pointer-events:none;z-index:500;display:none;
   transform:translate(-50%,-50%);}
