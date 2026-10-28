@@ -3,12 +3,12 @@
 // ════════════════════════════════════════════════
 // MULTIJOUEUR — PeerJS (WebRTC) : un code de partie court (ex. K7QX2P), topologie en étoile (l'hôte relaie).
 // Synchronisé : joueurs (position, pseudo, skin, objet en main, coup de bras), blocs, feu (simulé par l'hôte),
-// coffres (contenu + orientation), objets au sol (dont ceux jetés avec la touche A), chat, cycle jour/nuit.
-// Non synchronisé : inventaires, armures visibles, four (état global unique dans ce jeu).
+// coffres (contenu + orientation), fours (un état par bloc : l'hôte fait cuire, les clients affichent), objets au sol (dont ceux jetés avec la touche A), chat, cycle jour/nuit.
+// Non synchronisé : inventaires, armures visibles.
 // ════════════════════════════════════════════════
 const mpEl = id => document.getElementById(id);
 const MP_ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const MP_RELAY = new Set(['p','c','b','dr','dk','du','ch']);   // messages de jeu que l'hôte retransmet tels quels
+const MP_RELAY = new Set(['p','c','b','dr','dk','du','ch','fu']);   // messages de jeu que l'hôte retransmet tels quels
 
 // ── Pseudo (modifiable dans le menu principal et dans le menu pause) ──
 function setUsername(v, fromEl){
@@ -150,8 +150,9 @@ function mpMakeHello(){
   const chests = [], cd = [];
   for(const [k,s] of CHESTS) chests.push([k, s.map(x=>[x.id, x.n])]);
   for(const [k,d] of CHEST_DIR) cd.push([k, d]);
+  const furnaces = []; for(const k of FURNACES.keys()) furnaces.push(mpFurnaceMsg(k, true));
   return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount,
-    edits:[...MP.edits.values()], cd, chests,
+    edits:[...MP.edits.values()], cd, chests, furnaces,
     fire:FIRE_LIST.map(f=>[f.x, f.y, f.z, f.gen||0, f.block||0]),
     drops:drops.filter(d=>!d.collecting).map(d=>[d.uid, d.wx, d.wy, d.wz, d.id, d.n])};
 }
@@ -168,6 +169,7 @@ function mpOnHello(m){
   handlePlayBtn().then(()=>{
     for(const e of (m.edits||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4]);
     for(const [k,s] of (m.chests||[])) mpSetChest(k, s);
+    for(const f of (m.furnaces||[])) mpSetFurnace(f);
     mpApplyFires(m.fire||[]);
     for(const a of (m.drops||[])) spawnDrop(a[1], a[2], a[3], a[4], a[5], {remote:true, uid:a[0], vx:0, vy:0, vz:0});
     dayT = +m.dayT; dayCount = m.dc|0;
@@ -185,6 +187,7 @@ function mpRecvGame(m){
     case 'dk': { const i = drops.findIndex(d=>d.uid===m.u); if(i>=0) removeDrop(i); break; }
     case 'du': { const d = drops.find(d=>d.uid===m.u); if(d) d.n = m.n|0; break; }
     case 'ch': mpSetChest(m.k, m.s); break;
+    case 'fu': mpSetFurnace(m); break;
     case 'gm':   // l'hôte change le mode de jeu d'un joueur : seul un message de l'hôte (H) destiné à ce joueur est accepté
       if(m.f==='H' && m.to===MP.pid && GM_LABEL[m.m]){ applyGameMode(m.m); addChat('Your game mode has been updated to '+GM_LABEL[m.m], '#ffff55'); }
       break;
@@ -202,6 +205,7 @@ function mpApplyEdit(x,y,z,v,d){
   MP.edits.set(k, d===undefined ? [x,y,z,v] : [x,y,z,v,d]);
   if(v===27 && d!==undefined) CHEST_DIR.set(k, d);
   else if(v!==27 && getB(x,y,z)===27){ CHESTS.delete(k); CHEST_DIR.delete(k); }
+  if(v!==21 && getB(x,y,z)===21){ FURNACES.delete(k); MP_FUR.sig.delete(k); if(FURNACE_CUR===k){ FURNACE_CUR = null; if(mpEl('furnace-ui').classList.contains('open')) closeUI(); } }   // four cassé par un autre joueur
   MP.applying = true;
   try{ if(setB(x,y,z,v)) markDirty(x,y,z,true); }finally{ MP.applying = false; }
 }
@@ -224,6 +228,44 @@ function mpChestPoll(dt){
   const k = MP.chestKey, sig = mpChestSig(k);
   if(sig && MP.chestSig.get(k)!==sig){ MP.chestSig.set(k, sig); mpOut({t:'ch', k, s:CHESTS.get(k).map(x=>[x.id, x.n])}); }
   if(!isOpen) MP.chestKey = null;
+}
+
+// ── Fours : un état par bloc. L'hôte fait cuire et diffuse l'état complet (contenu + progression) quand il change
+//    (et toutes les 0,5 s pour les fours allumés). Un client qui manipule le contenu envoie seulement les 3 emplacements. ──
+const MP_FUR = {sig:new Map(), t:0};
+const mpFurnaceSig = k => { const F = FURNACES.get(k); return F ? JSON.stringify([F.input.id,F.input.n,F.fuel.id,F.fuel.n,F.output.id,F.output.n,F.active?1:0]) : null; };
+function mpFurnaceMsg(k, full){
+  const F = FURNACES.get(k), m = {t:'fu', k, s:[[F.input.id,F.input.n],[F.fuel.id,F.fuel.n],[F.output.id,F.output.n]]};
+  if(full) m.st = [Math.round(F.fuelTime), Math.round(F.fuelMax), Math.round(F.smeltTime), F.active?1:0];
+  return m;
+}
+function mpFurnaceSend(k){
+  if(!MP.open || !FURNACES.has(k)) return;
+  MP_FUR.sig.set(k, mpFurnaceSig(k));
+  mpOut(mpFurnaceMsg(k, MP.role==='host'));
+}
+function mpSetFurnace(m){
+  if(!m || typeof m.k!=='string' || !/^-?\d+,-?\d+,-?\d+$/.test(m.k) || !Array.isArray(m.s)) return;
+  const F = furnaceAt(m.k), was = F.active;
+  const put = (slot, a)=>{
+    const id = (a && (typeof a[0]==='number' || (typeof a[0]==='string' && a[0].length<48))) ? a[0] : null;
+    slot.n = id===null ? 0 : Math.max(0, Math.min(64, (a[1]|0)));
+    slot.id = slot.n>0 ? id : null;
+  };
+  put(F.input, m.s[0]); put(F.fuel, m.s[1]); put(F.output, m.s[2]);
+  if(Array.isArray(m.st)){ F.fuelTime = +m.st[0]||0; F.fuelMax = +m.st[1]||0; F.smeltTime = +m.st[2]||0; F.active = !!m.st[3]; }
+  MP_FUR.sig.set(m.k, mpFurnaceSig(m.k));
+  if(F.active !== was){ const c = m.k.split(','); markDirty(+c[0], +c[1], +c[2], true); }
+  if(FURNACE_CUR===m.k && mpEl('furnace-ui').classList.contains('open')) drawFurnaceUI(false);
+}
+function mpFurnacePoll(dt){
+  if(MP.role!=='host') return;
+  MP_FUR.t += dt; const resync = MP_FUR.t >= 0.5; if(resync) MP_FUR.t = 0;
+  for(const [k,F] of FURNACES){
+    const sig = mpFurnaceSig(k);
+    if(sig !== MP_FUR.sig.get(k)){ MP_FUR.sig.set(k, sig); mpOut(mpFurnaceMsg(k, true)); }
+    else if(resync && F.active) mpOut(mpFurnaceMsg(k, true));
+  }
 }
 
 // ── Feu : l'hôte simule, les clients affichent ; un client qui allume / éteint envoie une demande à l'hôte ──
@@ -287,7 +329,7 @@ function mpSetHeld(model, id){
 function mpClose(){
   const peer = MP.peer, hc = MP.hostConn, conns = [...MP.conns.values()];
   MP.peer = null; MP.hostConn = null; MP.conns.clear(); MP.open = false; MP.role = null; MP.pid = null; MP.code = null;
-  MP.started = false; MP.eq.length = 0; MP.chestKey = null; MP.armSig = '';
+  MP.started = false; MP.eq.length = 0; MP.chestKey = null; MP.armSig = ''; MP_FUR.sig.clear();
   mpClearLights();
   for(const p of MP.players.values()) mpRemoveRemote(p);
   MP.players.clear();
