@@ -8,7 +8,8 @@ const IMGS = {}, T3 = {}, GRAY = {};
 // 5 Savane, 6 Taïga, 7 Jungle, 8 Forêt fleurie, 9 Collines venteuses, 10 Badlands
 const GRASS_TINT   = [[145,189,89],[121,192,90],[138,182,137],[191,183,85],[104,178,78],[191,183,85],[134,183,131],[ 89,201, 60],[121,192,90],[138,182,137],[144,129, 77]];
 const FOLIAGE_TINT = [[119,171,47],[ 89,174,48],[109,163,107],[174,164,42],[ 72,160,40],[174,164,42],[104,164,100],[ 48,187, 11],[ 89,174,48],[109,163,107],[158,129, 77]];
-const TINT_KEYS = {grass_top:'g', short_grass:'g', leaves:'f'};
+const TINT_KEYS = {grass_top:'g', short_grass:'g', leaves:'f', jungle_leaves:'f', acacia_leaves:'f', dark_oak_leaves:'f'};   // teinte selon le biome (par sommet)
+const FIXED_TINT = {spruce_leaves:[97,153,97], birch_leaves:[128,167,85]};   // teinte fixe (comme Minecraft) : appliquée une fois au chargement
 function tintCanvas(cv, rgb){
   const c = cv.getContext('2d'), id = c.getImageData(0,0,cv.width,cv.height), d = id.data;
   for(let i=0;i<d.length;i+=4){ d[i]=d[i]*rgb[0]/255; d[i+1]=d[i+1]*rgb[1]/255; d[i+2]=d[i+2]*rgb[2]/255; }
