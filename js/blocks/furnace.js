@@ -3,16 +3,26 @@
 // ════════════════════════════════════════════════
 // FOUR (FURNACE)
 // ════════════════════════════════════════════════
-const FURNACE = {
-  input:  {id:null,n:0},
-  fuel:   {id:null,n:0},
-  output: {id:null,n:0},
-  fuelTime:   0,   // ticks de fuel restants
-  fuelMax:    0,   // ticks max du fuel actuel
-  smeltTime:  0,   // progression de la fonte (0..200)
-  active:     false,
-  pos:        null, // {x,y,z} du four actuellement ouvert
-};
+// Un four = un bloc : l'état (contenu + progression) est rangé par position "x,y,z", comme les coffres.
+// Tous les fours posés cuisent en parallèle ; casser un four fait tomber son contenu (voir doBreak).
+const FURNACES = new Map();   // "x,y,z" → {input, fuel, output, fuelTime, fuelMax, smeltTime, active}
+let FURNACE_CUR = null;       // clé du four dont l'interface est ouverte
+function newFurnaceState(){
+  return {
+    input:  {id:null,n:0},
+    fuel:   {id:null,n:0},
+    output: {id:null,n:0},
+    fuelTime:   0,   // ticks de fuel restants
+    fuelMax:    0,   // ticks max du fuel actuel
+    smeltTime:  0,   // progression de la fonte (0..200)
+    active:     false,
+  };
+}
+function furnaceAt(k){ let F = FURNACES.get(k); if(!F){ F = newFurnaceState(); FURNACES.set(k, F); } return F; }
+function curFurnace(){ return FURNACE_CUR ? furnaceAt(FURNACE_CUR) : null; }
+function openFurnace(x,y,z){ FURNACE_CUR = x+','+y+','+z; furnaceAt(FURNACE_CUR); toggleUI('furnace'); }
+// multijoueur : après une action dans l'interface du four, on envoie son contenu (voir network.js)
+function furnaceChanged(){ if(FURNACE_CUR && typeof mpFurnaceSend==='function') mpFurnaceSend(FURNACE_CUR); }
 
 // Recettes de fonte : id_entrée → id_sortie
 const SMELT_RECIPES = {
@@ -51,77 +61,86 @@ function getFuelTicks(id){
   return FUEL_VALUES[id]||0;
 }
 
-function _updateFurnaceCore(dt){
+// auth = vrai : ce pair simule vraiment (solo, ou hôte). Sinon (client) : seule la progression est animée,
+// le contenu vient des messages de l'hôte (évite de fondre deux fois les mêmes objets).
+function _tickFurnace(F, dt, auth){
   const ticks = dt*20; // 20 ticks/s
+  if(!auth){
+    if(F.fuelTime>0) F.fuelTime = Math.max(0, F.fuelTime-ticks);
+    if(F.active) F.smeltTime = Math.min(200, F.smeltTime+ticks);
+    return;
+  }
 
-  const result = getSmeltResult(FURNACE.input.id);
-  const hasInput = FURNACE.input.id!==null && FURNACE.input.n>0 && result!==null;
+  const result = getSmeltResult(F.input.id);
+  const hasInput = F.input.id!==null && F.input.n>0 && result!==null;
 
   // Si plus de fuel, essayer d'en consommer un nouveau
-  if(FURNACE.fuelTime<=0){
-    if(hasInput && FURNACE.fuel.id!==null && FURNACE.fuel.n>0){
-      const fticks = getFuelTicks(FURNACE.fuel.id);
+  if(F.fuelTime<=0){
+    if(hasInput && F.fuel.id!==null && F.fuel.n>0){
+      const fticks = getFuelTicks(F.fuel.id);
       if(fticks>0){
-        FURNACE.fuelMax  = fticks;
-        FURNACE.fuelTime = fticks;
-        FURNACE.fuel.n--;
-        if(FURNACE.fuel.n<=0){FURNACE.fuel.id=null;FURNACE.fuel.n=0;}
-        FURNACE.active=true;
+        F.fuelMax  = fticks;
+        F.fuelTime = fticks;
+        F.fuel.n--;
+        if(F.fuel.n<=0){F.fuel.id=null;F.fuel.n=0;}
+        F.active=true;
       } else {
-        FURNACE.active=false;
+        F.active=false;
       }
     } else {
-      FURNACE.active=false;
-      FURNACE.smeltTime=0;
+      F.active=false;
+      F.smeltTime=0;
     }
   }
 
   // Décrémenter le fuel si actif
-  if(FURNACE.fuelTime>0){
-    FURNACE.fuelTime=Math.max(0, FURNACE.fuelTime-ticks);
-    FURNACE.active=true;
+  if(F.fuelTime>0){
+    F.fuelTime=Math.max(0, F.fuelTime-ticks);
+    F.active=true;
   }
 
   // Fondre
-  if(FURNACE.active && hasInput){
-    FURNACE.smeltTime+=ticks;
-    if(FURNACE.smeltTime>=200){
-      FURNACE.smeltTime=0;
+  if(F.active && hasInput){
+    F.smeltTime+=ticks;
+    if(F.smeltTime>=200){
+      F.smeltTime=0;
       if(result!==null){
-        if(FURNACE.output.id===null){
-          FURNACE.output.id=result; FURNACE.output.n=1;
-        } else if(FURNACE.output.id===result && FURNACE.output.n<64){
-          FURNACE.output.n++;
+        if(F.output.id===null){
+          F.output.id=result; F.output.n=1;
+        } else if(F.output.id===result && F.output.n<64){
+          F.output.n++;
         } else {
-          FURNACE.smeltTime=200; return; // sortie pleine
+          F.smeltTime=200; return; // sortie pleine
         }
-        FURNACE.input.n--;
-        if(FURNACE.input.n<=0){FURNACE.input.id=null;FURNACE.input.n=0;}
+        F.input.n--;
+        if(F.input.n<=0){F.input.id=null;F.input.n=0;}
       }
     }
-  } else if(!FURNACE.active){
-    FURNACE.smeltTime=0;
-  }
-
-  // Mise à jour UI si ouvert
-  _furnUiT += dt;
-  if(_furnUiT > 0.15 && document.getElementById('furnace-ui').classList.contains('open')){
-    _furnUiT = 0; drawFurnaceUI();
+  } else if(!F.active){
+    F.smeltTime=0;
   }
 }
 
 let _furnUiT = 0;
 function updateFurnace(dt){
-  const was = FURNACE.active;
-  _updateFurnaceCore(dt);
-  // le four actif est une source de lumière précalculée : on reconstruit les chunks proches quand il s'allume/s'éteint
-  if(FURNACE.active !== was && FURNACE.pos) markDirty(FURNACE.pos.x, FURNACE.pos.y, FURNACE.pos.z, true);
+  const auth = !(typeof MP!=='undefined' && MP.open && MP.role==='client');
+  for(const [k, F] of FURNACES){
+    const was = F.active;
+    _tickFurnace(F, dt, auth);
+    // un four actif est une source de lumière précalculée : on reconstruit les chunks proches quand il s'allume/s'éteint
+    if(F.active !== was){ const c = k.split(','); markDirty(+c[0], +c[1], +c[2], true); }
+  }
+  // Mise à jour UI si ouvert
+  _furnUiT += dt;
+  if(_furnUiT > 0.15 && FURNACE_CUR && document.getElementById('furnace-ui').classList.contains('open')){
+    _furnUiT = 0; drawFurnaceUI();
+  }
 }
 function takeFurnaceOutput(){
-  if(!FURNACE.output.id) return;
-  addInv(FURNACE.output.id, FURNACE.output.n);
-  FURNACE.output.id=null; FURNACE.output.n=0;
-  drawFurnaceUI(); drawHotbar();
+  const F = curFurnace(); if(!F || !F.output.id) return;
+  addInv(F.output.id, F.output.n);
+  F.output.id=null; F.output.n=0;
+  drawFurnaceUI(); drawHotbar(); furnaceChanged();
 }
 
 function renderFurnaceSlot(el, slot){
@@ -134,14 +153,15 @@ function renderFurnaceSlot(el, slot){
 }
 
 function drawFurnaceUI(rebuildInv){
-  renderFurnaceSlot(document.getElementById('furnace-input'),  FURNACE.input);
-  renderFurnaceSlot(document.getElementById('furnace-fuel'),   FURNACE.fuel);
-  renderFurnaceSlot(document.getElementById('furnace-output'), FURNACE.output);
+  const F = curFurnace() || newFurnaceState();   // pas de four sélectionné : affichage vide
+  renderFurnaceSlot(document.getElementById('furnace-input'),  F.input);
+  renderFurnaceSlot(document.getElementById('furnace-fuel'),   F.fuel);
+  renderFurnaceSlot(document.getElementById('furnace-output'), F.output);
   // Barres
-  const fuelPct = FURNACE.fuelMax>0?(FURNACE.fuelTime/FURNACE.fuelMax*100):0;
+  const fuelPct = F.fuelMax>0?(F.fuelTime/F.fuelMax*100):0;
   document.getElementById('furnace-fuel-bar').style.width=fuelPct+'%';
-  document.getElementById('furnace-prog-bar').style.width=(FURNACE.smeltTime/200*100)+'%';
-  document.getElementById('furnace-status').textContent = FURNACE.active?'🔥 Lit':'⬜ Idle';
+  document.getElementById('furnace-prog-bar').style.width=(F.smeltTime/200*100)+'%';
+  document.getElementById('furnace-status').textContent = F.active?'🔥 Lit':'⬜ Idle';
   // Inventaire — ne reconstruire que si explicitement demandé ou si les conteneurs sont vides
   const mainEl = document.getElementById('furnace-inv-main');
   const hotbarEl = document.getElementById('furnace-inv-hotbar');
@@ -184,7 +204,7 @@ function furnaceSlotInteract(slot, e){
       slot.id=dragItem.id; slot.n=dragItem.n;
       dragItem=tmp; renderDragIcon(); dragEl.style.display='block';
     }
-    drawFurnaceUI(false); drawHotbar(); return;
+    drawFurnaceUI(false); drawHotbar(); furnaceChanged(); return;
   }
   // Pick up
   if(slot.id===null) return;
@@ -197,29 +217,29 @@ function furnaceSlotInteract(slot, e){
   }
   renderDragIcon(); dragEl.style.display='block';
   dragEl.style.left=mouseX+'px'; dragEl.style.top=mouseY+'px';
-  drawFurnaceUI(false); drawHotbar();
+  drawFurnaceUI(false); drawHotbar(); furnaceChanged();
 }
 
 function setupFurnaceSlots(){
-  document.getElementById('furnace-input') .addEventListener('mousedown',e=>furnaceSlotInteract(FURNACE.input, e));
-  document.getElementById('furnace-fuel')  .addEventListener('mousedown',e=>furnaceSlotInteract(FURNACE.fuel,  e));
+  document.getElementById('furnace-input') .addEventListener('mousedown',e=>{ const F = curFurnace(); if(F) furnaceSlotInteract(F.input, e); });
+  document.getElementById('furnace-fuel')  .addEventListener('mousedown',e=>{ const F = curFurnace(); if(F) furnaceSlotInteract(F.fuel,  e); });
   document.getElementById('furnace-output').addEventListener('mousedown',e=>{
     e.preventDefault(); e.stopPropagation();
-    if(FURNACE.output.id===null) return;
+    const F = curFurnace(); if(!F || F.output.id===null) return;
     if(dragItem){
       // On ne peut que récupérer la sortie, pas y déposer
-      if(dragItem.id===FURNACE.output.id && dragItem.n<64){
-        const add=Math.min(FURNACE.output.n,64-dragItem.n);
-        dragItem.n+=add; FURNACE.output.n-=add;
-        if(FURNACE.output.n<=0){FURNACE.output.id=null;FURNACE.output.n=0;}
+      if(dragItem.id===F.output.id && dragItem.n<64){
+        const add=Math.min(F.output.n,64-dragItem.n);
+        dragItem.n+=add; F.output.n-=add;
+        if(F.output.n<=0){F.output.id=null;F.output.n=0;}
         renderDragIcon();
       }
     } else {
-      dragItem={id:FURNACE.output.id,n:FURNACE.output.n};
-      FURNACE.output.id=null;FURNACE.output.n=0;
+      dragItem={id:F.output.id,n:F.output.n};
+      F.output.id=null;F.output.n=0;
       renderDragIcon(); dragEl.style.display='block';
       dragEl.style.left=mouseX+'px'; dragEl.style.top=mouseY+'px';
     }
-    drawFurnaceUI(false); drawHotbar();
+    drawFurnaceUI(false); drawHotbar(); furnaceChanged();
   });
 }
