@@ -50,7 +50,7 @@ Object.assign(BLOCKS[21], {tSide:'furnace_side', tFront:'furnace_front', tFrontO
 // ════════════════════════════════════════════════
 // Flags : leaves (cutout, teinte), glass (translucide), cross (modèle en croix), axis/logX/logZ (bûches), tFront/tFrontOn (face avant),
 //         mat ('stone'|'wood'|'earth'|'soft' = outil efficace), burn (inflammabilité), variantOf (état interne, absent du créatif).
-// Une texture manquante n'est jamais devinée : le repli est indiqué à côté (ex. dessus de la bûche d'acacia).
+// Une texture manquante n'est jamais devinée : si un repli est nécessaire, il est indiqué à côté.
 let _nid = 30;
 function addBlock(sid, name, tTop, tSide, tBot, p){
   const id = _nid++;
@@ -62,7 +62,7 @@ const _all = (sid, name, tex, p) => addBlock(sid, name, tex, tex, tex, p);   // 
 // Bois : planches, bûche (+ 2 variantes horizontales), feuilles
 [['spruce','Spruce'], ['birch','Birch'], ['jungle','Jungle'], ['acacia','Acacia'], ['dark_oak','Dark Oak']].forEach(([w, N]) => {
   _all(w+'_planks', N+' Planks', w+'_planks', {hard:1.5, mat:'wood', burn:0.025});
-  const top = (w === 'acacia') ? 'acacia_planks' : w+'_log_top';   // acacia : pas de texture de dessus fournie → planches en attendant
+  const top = w+'_log_top';
   const side = w+'_log_side', sideR = side+'_r';
   const log = addBlock(w+'_log', N+' Log', top, side, top, {hard:2, mat:'wood', burn:0.015, log:true});
   BLOCKS[log].logX = addBlock(w+'_log_x', N+' Log', top, side, top, {hard:2, mat:'wood', log:true, variantOf:log, drop:log, axis:'x', tSideR:sideR});
@@ -101,9 +101,9 @@ _all('oxidized_copper',  'Oxidized Copper', 'oxidized_copper',  {hard:5, mat:'st
 // Terre, sable, argile
 _all('clay',     'Clay',     'clay',     {hard:1, mat:'earth'});
 _all('red_sand', 'Red Sand', 'red_sand', {hard:1, mat:'earth'});
-// Grès : 3 textures (dessus lisse / côté à bande / dessous pavé). Grès rouge : pas de texture de dessous fournie → on réutilise le dessus.
+// Grès et grès rouge : 3 textures chacun (dessus lisse / côté à bande / dessous pavé)
 addBlock('sandstone',     'Sandstone',     'sandstone_top',     'sandstone_side',     'sandstone_bottom', {hard:2, mat:'stone'});
-addBlock('red_sandstone', 'Red Sandstone', 'red_sandstone_top', 'red_sandstone_side', 'red_sandstone_top', {hard:2, mat:'stone'});
+addBlock('red_sandstone', 'Red Sandstone', 'red_sandstone_top', 'red_sandstone_side', 'red_sandstone_bottom', {hard:2, mat:'stone'});
 
 // Terracotta (15 couleurs fournies ; pas de rose ni de terracotta nature)
 [['white','White'],['orange','Orange'],['magenta','Magenta'],['light_blue','Light Blue'],['yellow','Yellow'],['lime','Lime'],
