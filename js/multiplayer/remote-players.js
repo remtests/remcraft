@@ -83,6 +83,7 @@ function mpTick(dt){
   if(MP.eq.length){ const e = MP.eq; MP.eq = []; mpOut({t:'b', e}); }   // modifications de blocs groupées en un seul message
   if(MP.role==='host'){ MP.tmT += dt; if(MP.tmT > 1){ MP.tmT = 0; mpBroadcast({t:'tm', d:dayT, c:dayCount}, null); } }   // heure du monde
   mpChestPoll(dt);
+  mpFurnacePoll(dt);
   for(const p of MP.players.values()) mpUpdateRemote(p, dt);
   // lumière dynamique : un joueur distant qui tient une torche éclaire le décor autour de lui (comme la nôtre)
   const U = LIGHT_UNI.uFire.value; let k = 6;
