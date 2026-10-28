@@ -196,14 +196,14 @@ function mpRecvGame(m){
 
 // ── Blocs ──
 function mpSendEdit(x,y,z,v){
-  const k = x+','+y+','+z, e = (v===27 && CHEST_DIR.has(k)) ? [x,y,z,v,CHEST_DIR.get(k)] : [x,y,z,v];
+  const k = x+','+y+','+z, e = (BLOCKS[v]?.tFront && CHEST_DIR.has(k)) ? [x,y,z,v,CHEST_DIR.get(k)] : [x,y,z,v];
   MP.edits.set(k, e);          // journal complet : sert à synchroniser les joueurs qui arrivent plus tard
   if(MP.open) MP.eq.push(e);   // envoyé en lot dans mpTick
 }
 function mpApplyEdit(x,y,z,v,d){
   const k = x+','+y+','+z;
   MP.edits.set(k, d===undefined ? [x,y,z,v] : [x,y,z,v,d]);
-  if(v===27 && d!==undefined) CHEST_DIR.set(k, d);
+  if(BLOCKS[v]?.tFront && d!==undefined) CHEST_DIR.set(k, d);
   else if(v!==27 && getB(x,y,z)===27){ CHESTS.delete(k); CHEST_DIR.delete(k); }
   if(v!==21 && getB(x,y,z)===21){ FURNACES.delete(k); MP_FUR.sig.delete(k); if(FURNACE_CUR===k){ FURNACE_CUR = null; if(mpEl('furnace-ui').classList.contains('open')) closeUI(); } }   // four cassé par un autre joueur
   MP.applying = true;
