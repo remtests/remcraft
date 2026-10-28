@@ -22,8 +22,7 @@ function minAbs(lo,hi){ return (lo<=0&&hi>=0) ? 0 : Math.min(Math.abs(lo),Math.a
 // ══════════════════════════════════════════════════════════
 // IDs des blocs ajoutés (résolus par sid : indépendants de l'ordre de déclaration dans blocks.js)
 // ══════════════════════════════════════════════════════════
-const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;
-function BID(sid){ const v = _SID[sid]; if(v === undefined) throw new Error('génération : bloc inconnu « '+sid+' »'); return v; }
+// BID(sid) → id numérique : défini dans blocks.js
 const IS_LEAF = new Uint8Array(256); for(const id in BLOCKS) if(BLOCKS[id].leaves) IS_LEAF[id] = 1;
 const TREE = {};   // essences : {log, leaf}
 ['oak','spruce','birch','jungle','acacia','dark_oak'].forEach(w => TREE[w] = {log:BID(w+'_log'), leaf:BID(w+'_leaves')});
