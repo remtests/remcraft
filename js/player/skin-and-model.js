@@ -168,6 +168,7 @@ function updatePlayerModel(x,y,z,dt){
   m.root.rotation.y=m.by+Math.PI;
 }
 function updateCamera(ex,ey,ez){
+  camera.rotation.z = svTiltRoll();   // tilt de caméra quand le joueur prend des dégâts (survival.js)
   if(camMode===0){ camera.rotation.y=P.yaw; camera.rotation.x=P.pitch; camera.position.set(ex,ey,ez); return; }
   const sg=camMode===2?-1:1;   // 2 = caméra devant le joueur, tournée vers lui
   if(sg>0){ camera.rotation.y=P.yaw; camera.rotation.x=P.pitch; }
