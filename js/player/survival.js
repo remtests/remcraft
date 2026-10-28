@@ -18,7 +18,7 @@ const SV = {
   fall:0, air:15, burn:0,
   invul:0, lastDmg:0, foodTimer:0, tickAcc:0, burnT:0, drownT:0,
   inWater:false, headWater:false,
-  flash:0, hurtFlash:0, drawT:0, shakeT:0,
+  flash:0, hurtFlash:0, drawT:0, shakeT:0, tiltT:99, tiltAmp:0,   // tilt de caméra à la blessure (voir svTiltRoll)
   eat:null, dead:false, cause:'', spawn:null, dirty:true, modeShown:null,
 };
 const SV_MAX = 20, SV_AIR_MAX = 15, SV_EAT_TIME = 1.6;
@@ -49,7 +49,7 @@ function svResetStats(){
   SV.hp = SV_MAX; SV.food = 20; SV.sat = 5; SV.exh = 0;
   SV.fall = 0; SV.air = SV_AIR_MAX; SV.burn = 0; SV.invul = 0; SV.lastDmg = 0;
   SV.foodTimer = 0; SV.tickAcc = 0; SV.burnT = 0; SV.drownT = 0;
-  SV.flash = 0; SV.hurtFlash = 0; SV.eat = null; SV.dirty = true;
+  SV.flash = 0; SV.hurtFlash = 0; SV.tiltT = 99; SV.eat = null; SV.dirty = true;
 }
 function svInit(spawnX, spawnZ){
   SV.dead = false; SV.spawn = {x:spawnX, z:spawnZ};
@@ -80,6 +80,7 @@ function svDamage(amount, cause, opt){
   SV.hp = Math.max(0, SV.hp - amount);
   SV.exh = Math.min(40, SV.exh + 0.1);
   SV.hurtFlash = 0.3; SV.flash = 0.6; SV.dirty = true;
+  SV.tiltT = 0; SV.tiltAmp = 10 + 4*Math.min(1, amount/6);   // tilt de caméra : 10° pour un petit coup, 14° dès 6 points de dégâts
   if(SV.hp<=0) svDie(cause);
   return true;
 }
@@ -192,9 +193,20 @@ function svContact(){
   if(FIRES.has(fkey(fx,fy,fz)) || FIRES.has(fkey(fx,fy+1,fz))){ svDamage(1, 'fire'); SV.burn = Math.max(SV.burn, 6); }
 }
 
+// ── Tilt de caméra à la blessure (damage tilt) ──
+// Roulis instantané vers la gauche (10–14°) puis retour à l'horizontale en 0,4 s, en ease-out cubique.
+// Valeur positive = la caméra penche à gauche (rotation.z de Three.js, ordre YXZ → roulis autour de l'axe de visée).
+const TILT_DURATION = 0.4;
+function svTiltRoll(){
+  if(SV.tiltT >= TILT_DURATION) return 0;
+  const k = 1 - SV.tiltT/TILT_DURATION;          // 1 → 0
+  return SV.tiltAmp * (Math.PI/180) * k*k*k;     // ease-out : retombe vite, finit en douceur
+}
+
 // ── Mise à jour par frame ──
 function svUpdate(dt){
   if(!gameOn) return;
+  SV.tiltT += dt;
   SV.invul = Math.max(0, SV.invul-dt); SV.hurtFlash = Math.max(0, SV.hurtFlash-dt); SV.flash = Math.max(0, SV.flash-dt);
   if(SV.modeShown !== WORLD.mode) svRefreshMode();
   const hurt = document.getElementById('sv-hurt'), burn = document.getElementById('sv-burn');
