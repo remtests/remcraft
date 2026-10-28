@@ -34,7 +34,7 @@ function checkRecipe(gridType){
       const gi=(r+dr)*gw+(c+dc);
       const gv=gi<gridG.length?gridG[gi]:null;
       if(rv===0&&gv!==null) return false;
-      if(rv!==0&&rv!==gv) return false;
+      if(rv!==0&&rv!==gv&&!(rv==='#planks'&&gv!==null&&PLANKS_IDS[gv])) return false;   // '#planks' = toutes les planches
     }
     return true;
   }
