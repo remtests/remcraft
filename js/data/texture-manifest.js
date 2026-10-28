@@ -80,7 +80,7 @@ const TEX_DATA = {
   "polished_diorite": "assets/textures/blocks/Polished_Diorite_29_JE2_BE2.webp",
   "polished_granite": "assets/textures/blocks/Polished_Granite_29_JE2_BE2.webp",
   "tuff": "assets/textures/blocks/Tuff_29_JE1.webp",
-  "deepslate": "assets/textures/blocks/Deepslate_29_JE1.webp",
+  "deepslate": "assets/textures/blocks/Deepslate_29_JE3.webp",
   "cobbled_deepslate": "assets/textures/blocks/Cobbled_Deepslate_29_JE2.webp",
   "dripstone_block": "assets/textures/blocks/Dripstone_Block_29_JE1.webp",
   "lapis_ore": "assets/textures/blocks/Lapis_Lazuli_Ore_29_JE4_BE4.webp",
