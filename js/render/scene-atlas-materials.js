@@ -125,7 +125,7 @@ function initThree(){
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x87ceeb, 1e6, 1e6+1);   // brouillard désactivé (plus de teinte sur les blocs lointains)
 
-  camera = new THREE.PerspectiveCamera(S.fov, innerWidth/innerHeight, 0.1, 400);
+  camera = new THREE.PerspectiveCamera(S.fov, innerWidth/innerHeight, 0.1, 2400);
   camera.rotation.order = 'YXZ';
 
   hemisphereL = new THREE.HemisphereLight(0xffffff, 0xbbbbbb, 1.0);   // éclaire seulement joueur + objets au sol
