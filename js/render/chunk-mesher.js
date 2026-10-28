@@ -128,10 +128,11 @@ function buildChunkMesh(cx,cz){
     const i = (rz*RW+rx)*RNY + s.y+Y_OFF+1;
     if(LB[i] < s.lvl){ LB[i] = s.lvl; Q[_qt++&QMASK] = i; }
   }
-  if(typeof FURNACE!=='undefined' && FURNACE.active && FURNACE.pos){
-    const p = FURNACE.pos, rx = p.x-x0+17, rz = p.z-z0+17;
+  if(typeof FURNACES!=='undefined') for(const [fk, F] of FURNACES){   // chaque four allumé éclaire (niveau 13)
+    if(!F.active) continue;
+    const fc = fk.split(','), px = +fc[0], py = +fc[1], pz = +fc[2], rx = px-x0+17, rz = pz-z0+17;
     if(rx>=1&&rx<=48&&rz>=1&&rz<=48){
-      const i = (rz*RW+rx)*RNY + p.y+Y_OFF+1;
+      const i = (rz*RW+rx)*RNY + py+Y_OFF+1;
       if(LB[i] < 13){ LB[i] = 13; Q[_qt++&QMASK] = i; }
     }
   }
