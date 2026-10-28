@@ -29,6 +29,7 @@ const OPAQUE = new Uint8Array(256);   // bloc plein : cache les faces voisines e
 const HMB    = new Uint8Array(256);   // bloque la lumière du ciel pour la heightmap (opaque ou feuilles)
 const BCLS   = new Uint8Array(256);   // classe de mesh : 0 solide, 1 cutout, 2 verre, 3 eau
 const PLANT  = new Uint8Array(256);   // modèles en croix (herbe haute, fleurs, stalactites)
+const DRIP   = new Uint8Array(256);   // stalactites / stalagmites (modèle en croix retourné s'il pend du plafond)
 const AXIS   = new Uint8Array(256);   // bûches horizontales : 1 = axe X, 2 = axe Z
 const HASFRONT = new Uint8Array(256); // blocs orientés avec une face avant (coffre, four)
 for(const id in BLOCKS){
@@ -36,6 +37,7 @@ for(const id in BLOCKS){
   KNOWN[id] = 1;
   const isCross = !!(bd.plant || bd.cross), isLeaf = !!bd.leaves, isGlass = !!bd.glass;   // flags posés dans blocks.js
   PLANT[id] = isCross ? 1 : 0;
+  DRIP[id] = (bd.cross && !bd.plant) ? 1 : 0;
   AXIS[id] = bd.axis==='x' ? 1 : bd.axis==='z' ? 2 : 0;
   HASFRONT[id] = bd.tFront ? 1 : 0;
   const transp = (isLeaf||isGlass||t==='torch_block'||t==='water'||isCross);
