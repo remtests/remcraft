@@ -400,7 +400,7 @@ function generateChunk(cx,cz){
     }
   }
 
-  // 4b) forêt centenaire : arbres géants (tronc 2×2, canopée ovoïde), très espacés — 1 candidat par cellule de 11×11
+  // 4b) jungle : arbres géants (tronc 2×2, canopée ovoïde), très espacés — 1 candidat par cellule de 11×11
   {
     const CELL = 11;
     const i0 = Math.floor((x0-8)/CELL), i1 = Math.floor((x0+CSIZ+8)/CELL);
@@ -410,9 +410,9 @@ function generateChunk(cx,cz){
       if((hv>>>0)/4294967296 > 0.85) continue;
       const tx = ci*CELL + 1 + ((hv>>>4)&255)%8, tz = cj*CELL + 1 + ((hv>>>12)&255)%8;
       colInfo(tx,tz);
-      if((_ct!==4 && _ct!==7) || !(_ch>4 && _ch<55)) continue;
-      const GT = _ct===7 ? TREE.jungle : TREE.dark_oak;              // jungle : arbre de jungle géant ; forêt centenaire : chêne noir géant
-      const th = _ch, T = (_ct===7 ? 22 : 16) + ((hv>>>20)&15)%9;   // jungle : géants plus hauts
+      if(_ct!==7 || !(_ch>4 && _ch<55)) continue;
+      const GT = TREE.jungle;                                        // arbre de jungle géant
+      const th = _ch, T = 22 + ((hv>>>20)&15)%9;
       for(let a=0;a<2;a++) for(let b=0;b<2;b++){
         const lx = tx+a-x0, lz = tz+b-z0;
         if(lx<0||lx>=CSIZ||lz<0||lz>=CSIZ) continue;
@@ -431,6 +431,40 @@ function generateChunk(cx,cz){
           const d = Math.hypot(wxl+0.5-ccx, wzl+0.5-ccz);
           const jit = 0.85 + 0.3*((hash32(wxl,wzl,fy)>>>0)/4294967296);
           if(d <= rad*jit){ const idx = (lx*CSIZ+lz)*CHH+fy+Y_OFF; if(data[idx]===0) data[idx] = GT.leaf; }
+        }
+      }
+    }
+  }
+
+  // 4b') forêt centenaire : chênes noirs façon Minecraft — tronc 2×2 de 5 à 7 blocs, canopée large et basse, assez serrés (1 candidat par cellule de 7×7)
+  {
+    const CELL = 7, DO = TREE.dark_oak;
+    const i0 = Math.floor((x0-8)/CELL), i1 = Math.floor((x0+CSIZ+8)/CELL);
+    const j0 = Math.floor((z0-8)/CELL), j1 = Math.floor((z0+CSIZ+8)/CELL);
+    for(let ci=i0; ci<=i1; ci++) for(let cj=j0; cj<=j1; cj++){
+      const hv = hash32(ci,cj,902^SD);
+      if((hv>>>0)/4294967296 > 0.78) continue;
+      const tx = ci*CELL + ((hv>>>4)&255)%5, tz = cj*CELL + ((hv>>>12)&255)%5;   // tronc en [tx,tx+1]×[tz,tz+1] : ≥ 1 bloc d'écart avec la cellule voisine
+      colInfo(tx,tz);
+      if(_ct!==4 || !(_ch>4 && _ch<55)) continue;
+      const th = _ch, T = 5 + ((hv>>>20)&255)%3;   // hauteur du tronc : 5, 6 ou 7
+      for(let a=0;a<2;a++) for(let b=0;b<2;b++){
+        const lx = tx+a-x0, lz = tz+b-z0;
+        if(lx<0||lx>=CSIZ||lz<0||lz>=CSIZ) continue;
+        const bs = (lx*CSIZ+lz)*CHH;
+        for(let y=th+1; y<=th+T && y<=Y_MAX; y++){ const v = data[bs+y+Y_OFF]; if(v===0||IS_LEAF[v]) data[bs+y+Y_OFF] = DO.log; }
+      }
+      // canopée : 4 couches (dernier bloc de tronc = oy 0), large au milieu, plus étroite en haut et en bas
+      const top = th+T, ccx = tx+1, ccz = tz+1, RAD = {'-2':2.7, '-1':3.9, '0':3.9, '1':2.5};
+      for(let oy=-2; oy<=1; oy++){
+        const rad = RAD[oy], fy = top+oy;
+        if(fy>Y_MAX || fy<Y_MIN) continue;
+        for(let wxl=tx-4; wxl<=tx+5; wxl++) for(let wzl=tz-4; wzl<=tz+5; wzl++){
+          const lx = wxl-x0, lz = wzl-z0;
+          if(lx<0||lx>=CSIZ||lz<0||lz>=CSIZ) continue;
+          const d = Math.hypot(wxl+0.5-ccx, wzl+0.5-ccz);
+          const jit = 0.88 + 0.24*((hash32(wxl,wzl,fy^913)>>>0)/4294967296);
+          if(d <= rad*jit){ const idx = (lx*CSIZ+lz)*CHH+fy+Y_OFF; if(data[idx]===0) data[idx] = DO.leaf; }
         }
       }
     }
