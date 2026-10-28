@@ -231,13 +231,16 @@ function buildChunkMesh(cx,cz){
           if(nb===bid && !isOpq) continue;       // feuilles/verre/eau contre le même bloc
         }
         let tile = F.t===0 ? TILE_TOP[bid] : F.t===1 ? TILE_BOT[bid] : TILE_SIDE[bid];
-        if(bid===28 || bid===29){   // bûche horizontale : extrémités = anneaux ; écorce tournée pour que les fibres suivent l'axe
-          const endFace = bid===28 ? (f===2 || f===3) : (f===4 || f===5);
-          tile = endFace ? TILE_IDX['log_top'] : (bid===29 && f<2) ? TILE_IDX['log_side'] : TILE_IDX['log_side_r'];
+        if(AXIS[bid]){   // bûche horizontale (tous les bois) : extrémités = anneaux ; écorce tournée pour que les fibres suivent l'axe
+          const ax = AXIS[bid], endFace = ax===1 ? (f===2 || f===3) : (f===4 || f===5);
+          tile = endFace ? TILE_TOP[bid] : (ax===2 && f<2) ? TILE_SIDE[bid] : TILE_SIDE_R[bid];
         }
-        if(bid===27 && F.t===2){   // coffre : la face avant regarde dans la direction mémorisée à la pose
+        if(HASFRONT[bid] && F.t===2){   // coffre / four : la face avant regarde dans la direction mémorisée à la pose
           const dr = FACE_DIRS[CHEST_DIR.get(wx+','+wy+','+wz) ?? 3];
-          if(dr[0]===F.n[0] && dr[1]===F.n[2]) tile = TILE_IDX['chest_front'];
+          if(dr[0]===F.n[0] && dr[1]===F.n[2]){
+            const bf = BLOCKS[bid];
+            tile = (bf.tFrontOn && typeof FURNACES!=='undefined' && FURNACES.get(wx+','+wy+','+wz)?.active) ? TILE_IDX[bf.tFrontOn] : TILE_IDX[bf.tFront];   // four allumé : face avant en feu
+          }
         }
 
         // AO + lumière lissée par sommet (cases dans le plan de la face, du bon côté du sommet)
