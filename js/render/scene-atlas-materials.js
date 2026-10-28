@@ -15,10 +15,11 @@ const LIGHT_UNI = {
 };
 
 // ── Atlas de textures : 1 texture pour tout le monde → 1 à 4 draw calls par chunk (au lieu de ~15) ──
-const ATLAS_SZ = 256, ATLAS_CELL = 24, ATLAS_GUT = 4, ATLAS_PER_ROW = 10;
+const ATLAS_SZ = 512, ATLAS_CELL = 24, ATLAS_GUT = 4, ATLAS_PER_ROW = Math.floor(ATLAS_SZ/ATLAS_CELL);   // 21×21 = 441 tuiles (index stockés sur 8 bits : 255 max)
 let ATLAS_TEX = null;
 const TILE_IDX = {};
 const TILE_TOP = new Uint8Array(256), TILE_BOT = new Uint8Array(256), TILE_SIDE = new Uint8Array(256);
+const TILE_SIDE_R = new Uint8Array(256);   // côté tourné de 90° (bûches horizontales)
 let TILE_U0 = [], TILE_V0 = [];
 const TILE_TINT = new Uint8Array(256);   // 1 = teinte herbe, 2 = teinte feuillage
 const TILE_W = 16/ATLAS_SZ;
@@ -40,14 +41,15 @@ function rotatedCanvas(src){
   return c;
 }
 function buildAtlas(){
-  const names = new Set(['stone','torch_block','log_side_r']);
-  for(const id in BLOCKS){ const b = BLOCKS[id]; names.add(b.tTop); names.add(b.tSide); names.add(b.tBot); if(b.tFront) names.add(b.tFront); }
+  const names = new Set(['stone','torch_block']);
+  for(const id in BLOCKS){ const b = BLOCKS[id]; names.add(b.tTop); names.add(b.tSide); names.add(b.tBot); if(b.tFront) names.add(b.tFront); if(b.tFrontOn) names.add(b.tFrontOn); if(b.tSideR) names.add(b.tSideR); }
+  if(names.size > 255) console.error('Atlas : trop de tuiles (' + names.size + ' > 255)');
   const cv = document.createElement('canvas'); cv.width = cv.height = ATLAS_SZ;
   const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
   let i = 0;
   const G = ATLAS_GUT;
   for(const n of names){
-    const src = GRAY[n] || IMGS[n] || (n==='water' ? makeWaterCanvas() : n==='log_side_r' ? rotatedCanvas(IMGS['log_side']) : IMGS['stone']);
+    const src = GRAY[n] || IMGS[n] || (n==='water' ? makeWaterCanvas() : (/_r$/.test(n) && IMGS[n.slice(0,-2)]) ? rotatedCanvas(IMGS[n.slice(0,-2)]) : IMGS['stone']);
     const col = i%ATLAS_PER_ROW, row = (i/ATLAS_PER_ROW)|0;
     const ox = col*ATLAS_CELL+G, oy = row*ATLAS_CELL+G;
     if(src){
@@ -66,11 +68,10 @@ function buildAtlas(){
   for(const id in BLOCKS){
     const b = BLOCKS[id];
     TILE_TOP[id] = TILE_IDX[b.tTop]; TILE_BOT[id] = TILE_IDX[b.tBot]; TILE_SIDE[id] = TILE_IDX[b.tSide];
+    if(b.tSideR) TILE_SIDE_R[id] = TILE_IDX[b.tSideR];
   }
   TILE_TINT.fill(0);
-  if(TILE_IDX['grass_top']!==undefined)  TILE_TINT[TILE_IDX['grass_top']]  = 1;
-  if(TILE_IDX['short_grass']!==undefined)TILE_TINT[TILE_IDX['short_grass']]= 1;
-  if(TILE_IDX['leaves']!==undefined)     TILE_TINT[TILE_IDX['leaves']]     = 2;
+  for(const k in TINT_KEYS) if(TILE_IDX[k]!==undefined) TILE_TINT[TILE_IDX[k]] = TINT_KEYS[k]==='g' ? 1 : 2;   // 1 = herbe, 2 = feuillage
   ATLAS_TEX = new THREE.CanvasTexture(cv);
   ATLAS_TEX.magFilter = THREE.NearestFilter;
   ATLAS_TEX.minFilter = THREE.NearestFilter;   // pixels nets à toute distance : pas de mipmaps, pas de filtrage linéaire
