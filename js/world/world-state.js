@@ -28,15 +28,20 @@ const KNOWN  = new Uint8Array(256);   // id connu
 const OPAQUE = new Uint8Array(256);   // bloc plein : cache les faces voisines et bloque la lumière
 const HMB    = new Uint8Array(256);   // bloque la lumière du ciel pour la heightmap (opaque ou feuilles)
 const BCLS   = new Uint8Array(256);   // classe de mesh : 0 solide, 1 cutout, 2 verre, 3 eau
-const PLANT  = new Uint8Array(256);   // plantes en croix (herbe haute, fleurs)
+const PLANT  = new Uint8Array(256);   // modèles en croix (herbe haute, fleurs, stalactites)
+const AXIS   = new Uint8Array(256);   // bûches horizontales : 1 = axe X, 2 = axe Z
+const HASFRONT = new Uint8Array(256); // blocs orientés avec une face avant (coffre, four)
 for(const id in BLOCKS){
   const bd = BLOCKS[id], t = bd.tTop;
   KNOWN[id] = 1;
-  PLANT[id] = bd.plant ? 1 : 0;
-  const transp = (t==='leaves'||t==='glass'||t==='torch_block'||t==='water'||bd.plant);
+  const isCross = !!(bd.plant || bd.cross), isLeaf = !!bd.leaves, isGlass = !!bd.glass;   // flags posés dans blocks.js
+  PLANT[id] = isCross ? 1 : 0;
+  AXIS[id] = bd.axis==='x' ? 1 : bd.axis==='z' ? 2 : 0;
+  HASFRONT[id] = bd.tFront ? 1 : 0;
+  const transp = (isLeaf||isGlass||t==='torch_block'||t==='water'||isCross);
   OPAQUE[id] = transp ? 0 : 1;
-  HMB[id]    = (OPAQUE[id] || t==='leaves') ? 1 : 0;
-  BCLS[id]   = t==='glass' ? 2 : t==='water' ? 3 : (t==='leaves'||t==='torch_block'||bd.plant) ? 1 : 0;
+  HMB[id]    = (OPAQUE[id] || isLeaf) ? 1 : 0;
+  BCLS[id]   = isGlass ? 2 : t==='water' ? 3 : (isLeaf||t==='torch_block'||isCross) ? 1 : 0;
 }
 OPAQUE[27] = 0; HMB[27] = 1;   // coffre : bloc non plein (14×14×14) → les voisins gardent leurs faces, mais il bloque toujours le ciel
 OPAQUE[22] = 0; HMB[22] = 1;   // cactus : bloc non plein (14×14×16) → les voisins gardent leurs faces, mais il bloque toujours le ciel
