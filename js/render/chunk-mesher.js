@@ -195,6 +195,7 @@ function buildChunkMesh(cx,cz){
         const o = col*3, tnt = TILE_TINT[tile]===1;
         const cr = Math.round(255*0.95*(tnt?TINTG[o]:1)), cg = Math.round(255*0.95*(tnt?TINTG[o+1]:1)), cb = Math.round(255*0.95*(tnt?TINTG[o+2]:1));
         const sk = LT8[Math.min(60, LS[ri]*4)], bl = LT8[Math.min(60, LB[ri]*4)];
+        const hang = DRIP[bid] && OPAQUE[R[ri+1]] && !OPAQUE[R[ri-1]];   // stalactite : suspendue à un plafond → texture retournée (les textures sont dessinées pointe en haut)
         const jh = hash32(wx,wz,5), jx = ((jh&15)-7.5)/50, jz = (((jh>>4)&15)-7.5)/50;
         const x0p = wx+0.15+jx, x1p = wx+0.85+jx, z0p = wz+0.15+jz, z1p = wz+0.85+jz, y0p = wy, y1p = wy+1;
         const quads = [
@@ -207,7 +208,7 @@ function buildChunkMesh(cx,cz){
           for(let k=0;k<12;k++){ b.pos[p+k] = quads[s][k]; }
           for(let k=0;k<4;k++){
             b.uv[u+k*2]   = tu + QUV[k*2]*TILE_W;
-            b.uv[u+k*2+1] = tv + QUV[k*2+1]*TILE_W;
+            b.uv[u+k*2+1] = tv + (hang ? 1-QUV[k*2+1] : QUV[k*2+1])*TILE_W;
             b.col[c+k*3] = cr; b.col[c+k*3+1] = cg; b.col[c+k*3+2] = cb;
             b.lit[l+k*2] = sk; b.lit[l+k*2+1] = bl;
             b.nrm[q*12+k*3] = 0; b.nrm[q*12+k*3+1] = 127; b.nrm[q*12+k*3+2] = 0;
