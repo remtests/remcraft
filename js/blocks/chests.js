@@ -63,16 +63,23 @@ function doBreak(t){
       if(slots) for(const sl of slots) if(sl.id!==null && sl.n>0) spawnDrop(t.bx+0.5, t.by+0.5, t.bz+0.5, sl.id, sl.n);
       CHESTS.delete(k); CHEST_DIR.delete(k);
     }
+    let furnaceLit = false;
+    if(t.bid===21){   // le contenu du four (entrée, combustible, résultat) tombe au sol ; son état disparaît avec le bloc
+      const k = t.bx+','+t.by+','+t.bz, F = FURNACES.get(k);
+      if(F){
+        furnaceLit = F.active;
+        for(const sl of [F.input, F.fuel, F.output]) if(sl.id!==null && sl.n>0) spawnDrop(t.bx+0.5, t.by+0.5, t.bz+0.5, sl.id, sl.n);
+        FURNACES.delete(k);
+      }
+      if(FURNACE_CUR===k) FURNACE_CUR = null;
+    }
     svExhaust(0.005);   // casser un bloc fatigue un peu
-    setB(t.bx,t.by,t.bz,0); markDirty(t.bx,t.by,t.bz,t.bid===20);
+    setB(t.bx,t.by,t.bz,0); markDirty(t.bx,t.by,t.bz,t.bid===20 || furnaceLit);
     const above = getB(t.bx,t.by+1,t.bz);
     if(above && BLOCKS[above] && BLOCKS[above].plant){   // une plante sans support se détache
       spawnBreakParticles(t.bx,t.by+1,t.bz,above);
       setB(t.bx,t.by+1,t.bz,0); markDirty(t.bx,t.by+1,t.bz,false);
       const ad = BLOCKS[above].drop; if(ad!==null && ad!==undefined && !creative) spawnDrop(t.bx+0.5,t.by+1.5,t.bz+0.5,ad);
-    }
-    if(t.bid===21 && FURNACE.pos && FURNACE.pos.x===t.bx && FURNACE.pos.y===t.by && FURNACE.pos.z===t.bz){
-      FURNACE.active=false; FURNACE.pos=null;
     }
     const dropId = (bd.drop!==undefined) ? bd.drop : t.bid;
     if(dropId !== null && !creative) spawnDrop(t.bx+0.5, t.by+0.5, t.bz+0.5, dropId);   // créatif : pas d'objet au sol
@@ -87,7 +94,7 @@ function doBreak(t){
 function doPlace(){
   const t=castRay(); if(!t) return;
   if(BLOCKS[t.bid]?.isCraft){toggleUI('craft');return;}
-  if(BLOCKS[t.bid]?.isFurnace){FURNACE.pos={x:t.bx,y:t.by,z:t.bz};toggleUI('furnace');return;}
+  if(BLOCKS[t.bid]?.isFurnace){openFurnace(t.bx,t.by,t.bz);return;}
   if(BLOCKS[t.bid]?.isChest){openChest(t.bx,t.by,t.bz);return;}
   const it=hotItem();
   if(!it||it.id===null) return;
@@ -114,6 +121,7 @@ function doPlace(){
     CHEST_DIR.set(k, Math.abs(ddx)>Math.abs(ddz) ? (ddx>0?0:1) : (ddz>0?2:3));
     CHESTS.delete(k);
   }
+  if(blockId===21) FURNACES.delete(px+','+py+','+pz);   // un four neuf est toujours vide
   let placeId = blockId;
   if(blockId===5){   // bûche : axe selon la face visée (haut/bas → vertical, est/ouest → axe X, nord/sud → axe Z)
     const fx = t.pbx-t.bx, fz = t.pbz-t.bz, fy = t.pby-t.by;
