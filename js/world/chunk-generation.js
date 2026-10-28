@@ -20,6 +20,42 @@ function tri(a,gx,gz,gy,fx,fz,fy){
 function minAbs(lo,hi){ return (lo<=0&&hi>=0) ? 0 : Math.min(Math.abs(lo),Math.abs(hi)); }
 
 // ══════════════════════════════════════════════════════════
+// IDs des blocs ajoutés (résolus par sid : indépendants de l'ordre de déclaration dans blocks.js)
+// ══════════════════════════════════════════════════════════
+const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;
+function BID(sid){ const v = _SID[sid]; if(v === undefined) throw new Error('génération : bloc inconnu « '+sid+' »'); return v; }
+const IS_LEAF = new Uint8Array(256); for(const id in BLOCKS) if(BLOCKS[id].leaves) IS_LEAF[id] = 1;
+const TREE = {};   // essences : {log, leaf}
+['oak','spruce','birch','jungle','acacia','dark_oak'].forEach(w => TREE[w] = {log:BID(w+'_log'), leaf:BID(w+'_leaves')});
+const B_DEEPSLATE = BID('deepslate'), B_TUFF = BID('tuff'), B_SANDSTONE = BID('sandstone'), B_RED_SAND = BID('red_sand'), B_RED_SANDSTONE = BID('red_sandstone');
+const B_CLAY = BID('clay'), B_SNOW = BID('snow_block'), B_SNOWY_GRASS = BID('snowy_grass_block'), B_PACKED_ICE = BID('packed_ice'), B_DRIPSTONE = BID('dripstone_block');
+// pointed dripstone, de la pointe vers la base : tip, frustum, middle, base (+ tip_merge quand stalactite et stalagmite se rejoignent)
+const DR_TIP = BID('pointed_dripstone'), DR_MERGE = BID('pointed_dripstone_tip_merge'), DR_FRUSTUM = BID('pointed_dripstone_frustum'), DR_MIDDLE = BID('pointed_dripstone_middle'), DR_BASE = BID('pointed_dripstone_base');
+// minerai posé dans la pierre → même minerai « deepslate » quand l'hôte est de l'ardoise (le charbon n'en a pas : il reste hors de l'ardoise)
+const DEEP = {12:BID('deepslate_iron_ore'), 15:BID('deepslate_gold_ore'), 16:BID('deepslate_diamond_ore'),
+              [BID('lapis_ore')]:BID('deepslate_lapis_ore'), [BID('redstone_ore')]:BID('deepslate_redstone_ore'), [B_TUFF]:B_TUFF};
+// strates des Badlands : 20 couches de terracotta (le décalage varie lentement avec x,z → bandes légèrement ondulées)
+const BAD_STRATA = ['orange','orange','white','orange','yellow','orange','brown','orange','red','red','orange','light_gray','orange','orange','white','light_gray','brown','orange','red','yellow']
+  .map(c => BID(c+'_terracotta'));
+const STRATA = new Uint8Array(256);   // hôtes de l'or des Badlands
+STRATA[4] = STRATA[9] = STRATA[B_RED_SAND] = STRATA[B_RED_SANDSTONE] = 1; BAD_STRATA.forEach(i => STRATA[i] = 1);
+const DR_HOST = new Uint8Array(256); DR_HOST[3] = DR_HOST[B_DEEPSLATE] = DR_HOST[B_TUFF] = 1;   // roches qui portent des stalactites
+const SAND_LIKE = new Uint8Array(256); SAND_LIKE[4] = SAND_LIKE[B_RED_SAND] = 1;               // sols à cactus
+// essence d'arbre d'un biome (r ∈ [0,1) : tirage par arbre)
+function pickTree(type, r){
+  switch(type){
+    case 0: return r < 0.15 ? 'birch' : 'oak';       // plaines : quelques bouleaux
+    case 1: return r < 0.30 ? 'birch' : 'oak';       // forêt : chênes + bouleaux
+    case 8: return r < 0.40 ? 'birch' : 'oak';       // forêt fleurie
+    case 5: return 'acacia';                         // savane
+    case 6: return 'spruce';                         // taïga
+    case 7: return 'jungle';                         // jungle
+    case 9: return r < 0.50 ? 'spruce' : 'oak';      // collines venteuses
+    default: return 'oak';
+  }
+}
+
+// ══════════════════════════════════════════════════════════
 // MINERAIS — FILONS À RÉPARTITION GAUSSIENNE EN HAUTEUR
 // ══════════════════════════════════════════════════════════
 // Chaque filon est tiré à partir d'une « tentative » : (x,z) aléatoire dans un chunk source, y tiré selon une
@@ -31,9 +67,20 @@ function minAbs(lo,hi){ return (lo<=0&&hi>=0) ? 0 : Math.min(Math.abs(lo),Math.a
 // Ordre = priorité (le plus rare d'abord : un filon ne remplace que la pierre encore intacte).
 const ORES = [
   { id:16, name:'diamant', n:1.4,  size:6,  lo:-59, hi:16, g:[{m:-58, s:13, w:1}] },
+  { id:BID('lapis_ore'),    name:'lapis',    n:1.6, size:7, lo:-59, hi:64, g:[{m:0,   s:14, w:1}] },       // autour de y = 0
+  { id:BID('redstone_ore'), name:'redstone', n:4,   size:8, lo:-59, hi:16, g:[{m:-56, s:16, w:1}] },       // profondeur
   { id:15, name:'or',      n:2.4, size:8,  lo:-59, hi:32, g:[{m:-16, s:14, w:1}] },
   { id:12, name:'fer',     n:9,   size:9,  lo:-59, hi:89, g:[{m:16, s:22, w:0.6}, {m:76, s:11, w:0.4}] },   // cavernes (16) + sommets des montagnes
   { id:13, name:'charbon', n:36,  size:10, lo:0,   hi:89, g:[{m:95, s:75, w:1}] },                            // jamais sous y = 0
+  // Poches de roches (ne remplacent que la pierre intacte → placées après les minerais) : granite / diorite / andésite en hauteur, tuf dans l'ardoise
+  { id:BID('granite'),   name:'granite',   n:1.5, size:30, lo:0,   hi:89, g:[{m:48, s:28, w:1}] },
+  { id:BID('diorite'),   name:'diorite',   n:1.5, size:30, lo:0,   hi:89, g:[{m:48, s:28, w:1}] },
+  { id:BID('andesite'),  name:'andésite',  n:1.5, size:30, lo:0,   hi:89, g:[{m:48, s:28, w:1}] },
+  { id:B_TUFF,           name:'tuf',       n:2,   size:30, lo:-59, hi:0,  g:[{m:-24, s:20, w:1}] },
+  // Poches de neige / glace au cœur des sommets (jamais atteintes hors des hautes montagnes)
+  { id:BID('powder_snow'), name:'neige poudreuse', n:2,   size:10, lo:44, hi:89, g:[{m:62, s:12, w:1}] },
+  { id:B_PACKED_ICE,       name:'glace compacte',  n:1.5, size:14, lo:52, hi:89, g:[{m:70, s:10, w:1}] },
+  { id:BID('blue_ice'),    name:'glace bleue',     n:0.5, size:8,  lo:62, hi:89, g:[{m:78, s:8,  w:1}] },
 ];
 // Badlands : or « en masse ». La surface y est trop basse pour la plage Minecraft (32…256) → on la prend relative à la surface.
 const BAD_GOLD = { id:15, n:5, size:8, depthMean:10, sigma:6 };
@@ -81,7 +128,9 @@ function fillVein(data, x0, z0, r, ox, oy, oz, size, id, anyStrata, ylo, yhi){
           const ly = y + Y_OFF; if(ly <= BED_LY || ly > Y_MAX+Y_OFF) continue;
           const dy = (y+0.5-cy)/rad; if(dx*dx+dz*dz+dy*dy >= 1) continue;
           const b = data[base+ly];
-          if(b === 3 || (anyStrata && (b === 4 || b === 9))) data[base+ly] = id;
+          if(b === 3) data[base+ly] = id;
+          else if(b === B_DEEPSLATE){ const dv = DEEP[id]; if(dv) data[base+ly] = dv; }   // dans l'ardoise : variante deepslate (ou rien si elle n'existe pas)
+          else if(anyStrata && STRATA[b]) data[base+ly] = id;
         }
       }
     }
@@ -124,7 +173,7 @@ function placeOres(data, cx, cz, SD, topH){
   }
 }
 
-function dirtDepthOf(type, h){ return (type===2 && h>38) || (type===9 && h>42) ? 1 : (type===10 ? 10 : 4); }
+function dirtDepthOf(type, h){ return (type===2 && h>38) || (type===9 && h>42) ? 1 : (type===10 ? 10 : (type===3 ? 7 : 4)); }   // désert : 2 sable + 5 grès ; badlands : 10 strates
 
 function generateChunk(cx,cz){
   const data = new Uint8Array(CSIZ*CSIZ*CHH);
@@ -207,9 +256,11 @@ function generateChunk(cx,cz){
       }
       if(carve) continue;
       const wy = ly - Y_OFF;
+      // ardoise : pleine sous y = −8, mélangée à la pierre entre −8 et 0 (probabilité croissante avec la profondeur)
       let block = 3;
+      if(wy < 0 && (wy <= -8 || ((Math.imul(hash32(wx*5+wy, wz*7+wy, 29^SD),-1640531535)>>>8)/16777216) < -wy/8)) block = B_DEEPSLATE;
       const depth = h - wy;
-      if(depth > 5 && ((Math.imul(hash32(wx*3+wy, wz*5+wy, 17^SD),-1640531535)>>>8)/16777216) < 0.035) block = 9; // poches de gravier (les minerais sont des filons : voir placeOres)
+      if(block === 3 && depth > 5 && ((Math.imul(hash32(wx*3+wy, wz*5+wy, 17^SD),-1640531535)>>>8)/16777216) < 0.035) block = 9; // poches de gravier (les minerais sont des filons : voir placeOres)
       data[base+ly] = block;
     }
     // pente locale : sur les versants raides des montagnes / collines venteuses, la roche affleure (pas d'herbe accrochée à la falaise)
@@ -220,15 +271,35 @@ function generateChunk(cx,cz){
       steep = sl >= (type===2 ? 3 : 4);
     }
     const sub = (steep || (type===2 && h>38) || (type===9 && h>42)) ? 3 : (type===3 ? 4 : 2);
-    if(type === 10){   // Badlands : strates horizontales
-      for(let ly=Math.max(BED_LY+1,stoneTop); ly<surfLy; ly++) data[base+ly] = BAD_BAND[(((ly-Y_OFF)%6)+6)%6];
-    } else for(let ly=Math.max(BED_LY+1,stoneTop); ly<surfLy; ly++) data[base+ly] = sub;
+    // argile : lentilles dans la couche de terre des basses terres (affleure rarement)
+    let clay = 0;
+    if(h <= 16 && (type===0 || type===1 || type===4 || type===5 || type===7 || type===8)){
+      const cl = perlin2(wx*0.05, wz*0.05, SD^1313);
+      clay = cl > 0.62 ? 2 : (cl > 0.45 ? 1 : 0);   // 2 = affleurante, 1 = sous la surface
+    }
+    // surface des Badlands : sable rouge sur les plateaux, terracotta nue ailleurs
+    const badSand = type === 10 && perlin2(wx*0.05, wz*0.05, SD^912) > -0.15;
+    const badOff = type === 10 ? ((perlin2(wx*0.02, wz*0.02, SD^444)*3)|0) : 0;
+    for(let ly=Math.max(BED_LY+1,stoneTop); ly<surfLy; ly++){
+      let v = sub;
+      if(type === 10){
+        const k = surfLy-ly;
+        v = badSand && k===1 ? B_RED_SAND : (badSand && k===2 ? B_RED_SANDSTONE : BAD_STRATA[((((ly-Y_OFF)+badOff)%20)+20)%20]);
+      } else if(type === 3) v = (surfLy-ly) <= 2 ? 4 : B_SANDSTONE;   // désert : 2 blocs de sable puis du grès
+      else if(clay && surfLy-ly <= 2) v = B_CLAY;
+      data[base+ly] = v;
+    }
+    // ligne des neiges : monte quand il fait chaud, descend quand il fait froid (+ ondulation)
+    const snowLine = (type===2 || type===9) ? 52 + (tempAt(wx,wz)-0.5)*40 + perlin2(wx*0.06, wz*0.06, SD^919)*3 : 999;
     let sb;
-    if(type === 3 || type === 10) sb = 4;   // sable du désert / des badlands
-    else if(type === 9){ const pn = perlin2(wx*0.07, wz*0.07, SD^717); sb = (steep || h>44 || pn>0.35) ? 3 : (pn>0.2 ? 9 : 1); }   // collines : plaques de pierre / gravier
+    if(type === 3) sb = 4;                    // sable du désert
+    else if(type === 10) sb = badSand ? B_RED_SAND : BAD_STRATA[((((surfLy-Y_OFF)+badOff)%20)+20)%20];
+    else if(type === 6 && tempAt(wx,wz) < 0.41) sb = B_SNOWY_GRASS;   // taïga enneigée
+    else if(clay === 2) sb = B_CLAY;
+    else if(type === 9){ const pn = perlin2(wx*0.07, wz*0.07, SD^717); sb = (h > snowLine+4 && !steep) ? B_SNOW : ((steep || h>44 || pn>0.35) ? 3 : (pn>0.2 ? 9 : 1)); }   // collines : neige en altitude, plaques de pierre / gravier
     else if(type !== 2) sb = 1;
-    else if(steep) sb = 3;
-    else if(h > 62) sb = 9;
+    else if(steep) sb = (h > snowLine+6 && perlin2(wx*0.11, wz*0.11, SD^920) > 0.25) ? B_PACKED_ICE : 3;   // versants raides : roche, avec des plaques de glace compacte tout en haut
+    else if(h > snowLine) sb = B_SNOW;       // sommets enneigés
     else if(h > 45) sb = 3;
     else if(h > 32) sb = 8;
     else            sb = 1;
@@ -239,7 +310,48 @@ function generateChunk(cx,cz){
   let topH = -99; for(let i=0;i<256;i++) if(_hArr[i] > topH) topH = _hArr[i];   // aucun hôte au-dessus du relief → rejet rapide
   placeOres(data, cx, cz, SD, topH);
 
-  // 4) arbres — passe avec marge de 2 blocs : les canopées ne sont plus coupées aux bordures de chunk
+  // 3c) grottes de dripstone : dans des zones (bruit basse fréquence), le sol et le plafond des cavernes deviennent de la dripstone
+  //     et portent des stalagmites / stalactites (pointed dripstone, 5 épaisseurs) ; piliers quand sol et plafond sont proches.
+  for(let lx=0;lx<CSIZ;lx++) for(let lz=0;lz<CSIZ;lz++){
+    const col = lx*CSIZ+lz, wx = x0+lx, wz = z0+lz;
+    if(perlin2(wx*0.018, wz*0.018, SD^2024) < 0.38) continue;
+    const base = col*CHH, patch = perlin2(wx*0.09, wz*0.09, SD^2025) > 0;
+    const yLo = -10+Y_OFF, yHi = Math.min(50, _hArr[col]-6)+Y_OFF, cap = Math.min(CHH-2, _hArr[col]-3+Y_OFF);
+    for(let ly=yLo; ly<yHi; ){
+      if(!(DR_HOST[data[base+ly]] && data[base+ly+1] === 0)){ ly++; continue; }
+      let c = ly+1; while(c<=cap && data[base+c] === 0) c++;   // c = premier bloc au-dessus de la cavité
+      if(c > cap || !DR_HOST[data[base+c]]){ ly = c; continue; }   // cavité ouverte ou plafond non rocheux
+      const floor = ly, G = c-floor-1;   // G = hauteur d'air entre sol et plafond
+      const r1 = hash2(wx, wz*131+floor, 31^SD), r2 = hash2(wx, wz*137+floor, 32^SD), r3 = hash2(wx, wz*139+floor, 33^SD), r4 = hash2(wx, wz*149+floor, 34^SD);
+      const pd = patch ? 0.85 : 0.15;
+      if(r1 < pd) data[base+floor] = B_DRIPSTONE;
+      if(r2 < pd) data[base+c] = B_DRIPSTONE;
+      // état d'un bloc selon sa distance à la pointe (k = 0 : pointe) et la longueur L de la formation
+      const stateAt = (k, L) => k === 0 ? DR_TIP : (k === L-1 ? DR_BASE : (k === 1 ? DR_FRUSTUM : DR_MIDDLE));
+      if(G >= 2 && G <= 7 && r3 < 0.18){   // pilier : stalagmite + stalactite qui se touchent (pointes fusionnées)
+        const a = G>>1, b = G-a;
+        for(let k=0;k<a;k++) data[base+floor+a-k] = k === 0 ? DR_MERGE : stateAt(k, a);   // pointe fusionnée en haut, base au sol
+        for(let k=0;k<b;k++) data[base+c-b+k] = k === 0 ? DR_MERGE : stateAt(k, b);   // pointe fusionnée en bas, base au plafond
+      } else if(G >= 2){
+        let La = 0;
+        if(r3 < 0.40) La = 1 + Math.min(Math.floor(r4*Math.min(5, G-1)), G-2);
+        if(La > 0) for(let k=0;k<La;k++) data[base+floor+La-k] = stateAt(k, La);   // stalagmite : base au sol, pointe en haut
+        const room = G-1-La;
+        if(room >= 1 && hash2(wx, wz*151+floor, 35^SD) < 0.45){
+          const Lb = 1 + Math.min(Math.floor(hash2(wx, wz*157+floor, 36^SD)*Math.min(6, room)), room-1);
+          for(let k=0;k<Lb;k++) data[base+c-Lb+k] = stateAt(k, Lb);                  // stalactite : base au plafond, pointe en bas
+        }
+      }
+      ly = c;
+    }
+  }
+
+  // 4) arbres — une essence par biome (chêne, bouleau, épicéa, acacia, jungle) ; passe avec marge de 2 blocs : les canopées ne sont plus coupées aux bordures de chunk
+  const putT = (flx,flz,y,id,airOnly) => {   // pose un bloc d'arbre si la colonne est dans ce chunk (le chunk voisin pose sa propre part)
+    if(flx<0||flx>=CSIZ||flz<0||flz>=CSIZ||y<Y_MIN||y>Y_MAX) return;
+    const i = (flx*CSIZ+flz)*CHH+y+Y_OFF;
+    if(!airOnly || data[i]===0) data[i] = id;
+  };
   for(let lx=-2;lx<CSIZ+2;lx++) for(let lz=-2;lz<CSIZ+2;lz++){
     const wx = x0+lx, wz = z0+lz;
     const ts = hash2(wx,wz,77^SD);
@@ -250,38 +362,41 @@ function generateChunk(cx,cz){
     const prob = TREE_P[type];
     if(ts >= prob || !(h>4 && h<50)) continue;
     if(type===9 && (h>44 || perlin2(wx*0.07, wz*0.07, SD^717) > 0.2)) continue;   // pas d'arbre sur la pierre / le gravier
-    let trunkH = 4 + (hash2(wx+1,wz,88^SD)*3|0);
-    if(type===6) trunkH = 6 + (hash2(wx+1,wz,88^SD)*4|0);        // sapin
-    else if(type===7) trunkH = 6 + (hash2(wx+1,wz,88^SD)*5|0);   // arbre de jungle
-    if(lx>=0&&lx<CSIZ&&lz>=0&&lz<CSIZ){
-      const b = (lx*CSIZ+lz)*CHH;
-      for(let t=1;t<=trunkH;t++){ const ty=h+t; if(ty<=Y_MAX) data[b+ty+Y_OFF]=5; }
+    const sp = pickTree(type, hash2(wx,wz,99^SD)), T = TREE[sp], rh = hash2(wx+1,wz,88^SD);
+    let trunkH = 4 + (rh*3|0);
+    if(sp==='spruce') trunkH = 6 + (rh*4|0);          // sapin
+    else if(sp==='jungle') trunkH = 6 + (rh*5|0);     // arbre de jungle
+    else if(sp==='birch' || sp==='acacia') trunkH = 5 + (rh*3|0);
+    if(sp==='acacia'){   // acacia : tronc qui se décale d'un cran vers un côté, canopée plate et large
+      const hd = hash32(wx,wz,66^SD)>>>0, dx = [1,-1,0,0][hd&3], dz = [0,0,1,-1][hd&3];
+      const bend = trunkH-2-((hd>>>2)&1), tx = lx+dx, tz = lz+dz, top = h+trunkH;
+      for(let t=1;t<=trunkH;t++) t <= bend ? putT(lx,lz,h+t,T.log,false) : putT(tx,tz,h+t,T.log,false);
+      for(let ox=-3;ox<=3;ox++) for(let oz=-3;oz<=3;oz++){
+        const mx = Math.max(Math.abs(ox),Math.abs(oz)), ad = Math.abs(ox)+Math.abs(oz);
+        if(mx<=3 && ad<=4) putT(tx+ox,tz+oz,top,T.leaf,true);        // couche principale (coins arrondis)
+        if(mx<=2 && ad<=3) putT(tx+ox,tz+oz,top+1,T.leaf,true);      // couche supérieure
+      }
+      continue;
     }
-    if(type===6){   // sapin : canopée conique par étages
+    for(let t=1;t<=trunkH;t++) putT(lx,lz,h+t,T.log,false);
+    if(sp==='spruce'){   // sapin : canopée conique par étages
       const top = h+trunkH;
       for(let ox=-2;ox<=2;ox++) for(let oz=-2;oz<=2;oz++){
-        const flx = lx+ox, flz = lz+oz;
-        if(flx<0||flx>=CSIZ||flz<0||flz>=CSIZ) continue;
-        const b = (flx*CSIZ+flz)*CHH, mx = Math.max(Math.abs(ox),Math.abs(oz)), ad = Math.abs(ox)+Math.abs(oz);
-        for(let fy=h+3; fy<=top+1 && fy<=Y_MAX; fy++){
+        const mx = Math.max(Math.abs(ox),Math.abs(oz)), ad = Math.abs(ox)+Math.abs(oz);
+        for(let fy=h+3; fy<=top+1; fy++){
           const k = top+1-fy, rad = k===0 ? 0 : (k<=2 ? 1 : (k%2 ? 2 : 1));
           if(mx>rad || (rad===2 && ad>3)) continue;
-          if(data[b+fy+Y_OFF]===0) data[b+fy+Y_OFF]=6;
+          putT(lx+ox,lz+oz,fy,T.leaf,true);
         }
       }
       continue;
     }
-    const topW = h+trunkH;
+    const topW = h+trunkH;   // chêne / bouleau / jungle : canopée arrondie
     for(let ox=-2;ox<=2;ox++) for(let oz=-2;oz<=2;oz++){
-      const flx = lx+ox, flz = lz+oz;
-      if(flx<0||flx>=CSIZ||flz<0||flz>=CSIZ) continue;
-      const b = (flx*CSIZ+flz)*CHH;
       for(let oy=-1;oy<=2;oy++){
         const dist = Math.sqrt(ox*ox+oz*oz)*0.9 + Math.abs(oy-0.8)*0.7;
         if(dist > 2.8) continue;
-        const fy = topW+oy;
-        if(fy<Y_MIN||fy>Y_MAX) continue;
-        if(data[b+fy+Y_OFF]===0) data[b+fy+Y_OFF]=6;
+        putT(lx+ox,lz+oz,topW+oy,T.leaf,true);
       }
     }
   }
@@ -297,12 +412,13 @@ function generateChunk(cx,cz){
       const tx = ci*CELL + 1 + ((hv>>>4)&255)%8, tz = cj*CELL + 1 + ((hv>>>12)&255)%8;
       colInfo(tx,tz);
       if((_ct!==4 && _ct!==7) || !(_ch>4 && _ch<55)) continue;
+      const GT = _ct===7 ? TREE.jungle : TREE.dark_oak;              // jungle : arbre de jungle géant ; forêt centenaire : chêne noir géant
       const th = _ch, T = (_ct===7 ? 22 : 16) + ((hv>>>20)&15)%9;   // jungle : géants plus hauts
       for(let a=0;a<2;a++) for(let b=0;b<2;b++){
         const lx = tx+a-x0, lz = tz+b-z0;
         if(lx<0||lx>=CSIZ||lz<0||lz>=CSIZ) continue;
         const bs = (lx*CSIZ+lz)*CHH;
-        for(let y=th+1; y<=th+T && y<=Y_MAX; y++){ const v = data[bs+y+Y_OFF]; if(v===0||v===6) data[bs+y+Y_OFF] = 5; }
+        for(let y=th+1; y<=th+T && y<=Y_MAX; y++){ const v = data[bs+y+Y_OFF]; if(v===0||IS_LEAF[v]) data[bs+y+Y_OFF] = GT.log; }
       }
       const top = th+T, ccx = tx+1, ccz = tz+1;
       for(let oy=-6; oy<=3; oy++){
@@ -315,7 +431,7 @@ function generateChunk(cx,cz){
           if(lx<0||lx>=CSIZ||lz<0||lz>=CSIZ) continue;
           const d = Math.hypot(wxl+0.5-ccx, wzl+0.5-ccz);
           const jit = 0.85 + 0.3*((hash32(wxl,wzl,fy)>>>0)/4294967296);
-          if(d <= rad*jit){ const idx = (lx*CSIZ+lz)*CHH+fy+Y_OFF; if(data[idx]===0) data[idx] = 6; }
+          if(d <= rad*jit){ const idx = (lx*CSIZ+lz)*CHH+fy+Y_OFF; if(data[idx]===0) data[idx] = GT.leaf; }
         }
       }
     }
@@ -327,8 +443,10 @@ function generateChunk(cx,cz){
     if(type===2 || h<=4 || h>=50) continue;
     const wx = x0+lx, wz = z0+lz, ay = h+1+Y_OFF;
     if(data[base+ay] !== 0) continue;
-    if(type===9 && data[base+h+Y_OFF] !== 1) continue;   // collines : rien sur la pierre / le gravier
+    const sbk = data[base+h+Y_OFF];   // bloc de surface
+    if(type!==3 && type!==10 && sbk !== 1) continue;   // herbe / fleurs : uniquement sur de l'herbe (ni neige, ni argile, ni pierre, ni gravier)
     if(type===3 || type===10){
+      if(!SAND_LIKE[sbk]) continue;   // cactus : uniquement sur du sable (rouge ou non), pas sur la terracotta nue
       if(hash2(wx,wz,444^SD) < (type===3 ? 0.006 : 0.0025)){
         const ch = 1 + ((hash32(wx,wz,445^SD)>>>0)%3);
         for(let t=0;t<ch && h+1+t<=Y_MAX;t++) data[base+ay+t] = 22;
