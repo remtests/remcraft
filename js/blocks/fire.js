@@ -6,7 +6,8 @@
 // Le feu n'est PAS un bloc du monde : c'est une entité légère (sprite animé 32 images, 1 seul draw call).
 // ════════════════════════════════════════════════
 const FIRE_SPRITE = "assets/textures/effects/fire.webp";
-const FIRE_FRAMES = 32, FIRE_FPS = 24, MAX_FIRE = 800, FIRE_TICK = 0.25, FIRE_GMAX = 3, FIRE_MAXLIT = 40;
+const FIRE_FRAMES = 32, FIRE_FPS = 24, MAX_FIRE = 800, FIRE_TICK = 0.25, FIRE_GMAX = 3, FIRE_MAXLIT = 120;   // FIRE_MAXLIT : feux à lumière précalculée dans les chunks
+const FIRE_SPREAD = 0.35;   // vitesse de propagation vers de nouvelles cases (saut de proche en proche + herbe) : 1 = ancienne vitesse, plus petit = plus lent
 const FIRES = new Map(), FIRE_LIST = [];
 let _fMesh = null, _fPos, _fUv, _fTex = null, _fAcc = 0, _fTime = 0, _fLit = 0, _fLT = 0;
 const _fLQ = [];   // relances d'éclairage (étalées dans le temps pour ne pas saccader)
@@ -120,7 +121,7 @@ function fireTick(f,dt){
   for(let i=0;i<2;i++){
     const cx=x+((Math.random()*3)|0)-1, cy=y+((Math.random()*3)|0)-1, cz=z+((Math.random()*3)|0)-1;
     const r = FIRE_BURN[getB(cx,cy,cz)];
-    if(r && !FIRES.has(fkey(cx,cy,cz)) && Math.random() < Math.min(1, r*1.6*dt/FIRE_TICK)) igniteBlock(cx,cy,cz,getB(cx,cy,cz));
+    if(r && !FIRES.has(fkey(cx,cy,cz)) && Math.random() < Math.min(1, r*1.6*FIRE_SPREAD*dt/FIRE_TICK)) igniteBlock(cx,cy,cz,getB(cx,cy,cz));
   }
   // 3) herbe : le feu court un peu sur les grass blocks (cellule au-dessus) et dans l'herbe courte / les fleurs
   if(f.gen < FIRE_GMAX){
@@ -132,7 +133,7 @@ function fireTick(f,dt){
       if(cb && !FIRE_PLANT[cb]) continue;
       if(getB(cx,cy-1,cz)!==1) continue;           // il faut un grass block dessous
       const lam = cb ? 0.2 : 0.04;                  // herbe courte : vite ; grass block nu : peu
-      if(Math.random() < Math.min(1, lam*3.25*dt/FIRE_TICK)) igniteAt(cx,cy,cz, f.gen + (cb ? 0.6 : 1));
+      if(Math.random() < Math.min(1, lam*3.25*FIRE_SPREAD*dt/FIRE_TICK)) igniteAt(cx,cy,cz, f.gen + (cb ? 0.6 : 1));
     }
   }
   return true;
@@ -159,9 +160,9 @@ function updateFire(dt){
     const step = _fAcc; _fAcc = 0;
     for(const f of FIRE_LIST.slice()){
       if(f.dead) continue;
+      if(!f.lit && _fLit < FIRE_MAXLIT){ f.lit = true; _fLit++; LIGHTSRC.set('f:'+f.k,{x:f.x,y:f.y,z:f.z,lvl:13}); _fLQ.push([f.x,f.y,f.z]); }   // un emplacement de lumière s'est libéré
       const d2 = mpFireD2(f.x+0.5, f.z+0.5);
-      if(d2 > 96*96){ removeFire(f); continue; }    // trop loin : oublié
-      if(d2 > 64*64) continue;                      // loin : figé
+      if(d2 > 64*64) continue;                      // loin : figé (il garde sa lumière et reprend quand on revient ; plus d'oubli à 96 blocs)
       if(!fireTick(f,step)){ removeFire(f); continue; }
       if(f.life<=0){ if(f.block) consumeBurning(f); else removeFire(f); }
     }
