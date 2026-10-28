@@ -14,7 +14,6 @@ const BIOME_IDS   = ['plains','forest','mountains','desert','old_growth_forest',
 const BIOME_NAMES = ['Plains','Forest','Mountains','Desert','Old Growth Forest','Savanna','Taiga','Jungle','Flower Forest','Windswept Hills','Badlands'];
 const NB = BIOME_IDS.length;
 const TREE_P   = [0.016,0.080,0,0,0,0.012,0.10,0.06,0.03,0.012,0];   // densité d'arbres par biome
-const BAD_BAND = [4,4,9,4,3,4];                                       // strates des Badlands (sable / gravier / pierre)
 // trois bruits climatiques : relief (biomeN), humidité (clim), température (temp)
 let _bN = 0, _bC = 0, _bT = 0;
 function biomeNoise(wx, wz){
@@ -35,6 +34,8 @@ function classifyBiome(n, c, t){
   if(t > 0.55 && c > 0.49) return 7;                         // jungle
   return c < 0.48 ? 4 : 1;                                   // forêt centenaire / forêt
 }
+// température seule (même bruit que _bT) : sert à placer la neige (taïga enneigée, ligne des neiges des montagnes) sans recalculer tout le climat
+function tempAt(wx, wz){ const sc = BIOME_SCALE; return octave2d(wx/(520*sc)-71.3, wz/(520*sc)+23.9, 3, WORLD_SEED^808, 2.0, 0.55); }
 function rawBiomeType(wx, wz){ biomeNoise(wx, wz); return classifyBiome(_bN, _bC, _bT); }
 function getRawBiome(wx, wz){
   const S0 = WORLD_SEED;
