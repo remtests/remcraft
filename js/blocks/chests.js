@@ -116,16 +116,16 @@ function doPlace(){
   if(isTorchItem && !getB(px,py-1,pz)) return;
   if(blockId===22 && !getB(px,py-1,pz)) return;   // un cactus a besoin d'un bloc dessous
   if(!isTorchItem && !BLOCKS[blockId]?.noCollide && px<P.x+EXT && px+1>P.x-EXT && py<P.y+1.8 && py+1>P.y && pz<P.z+EXT && pz+1>P.z-EXT) return;  // FIX : vrai test AABB
-  if(blockId===27){   // la face avant du coffre regarde le joueur
+  if(BLOCKS[blockId]?.tFront){   // coffre / four : la face avant regarde le joueur
     const k = px+','+py+','+pz, ddx = P.x-(px+0.5), ddz = P.z-(pz+0.5);
     CHEST_DIR.set(k, Math.abs(ddx)>Math.abs(ddz) ? (ddx>0?0:1) : (ddz>0?2:3));
-    CHESTS.delete(k);
+    if(blockId===27) CHESTS.delete(k);
   }
   if(blockId===21) FURNACES.delete(px+','+py+','+pz);   // un four neuf est toujours vide
   let placeId = blockId;
-  if(blockId===5){   // bûche : axe selon la face visée (haut/bas → vertical, est/ouest → axe X, nord/sud → axe Z)
+  if(BLOCKS[blockId]?.logX){   // bûche (tous les bois) : axe selon la face visée (haut/bas → vertical, est/ouest → axe X, nord/sud → axe Z)
     const fx = t.pbx-t.bx, fz = t.pbz-t.bz, fy = t.pby-t.by;
-    if(!tp && fy===0){ if(fx!==0) placeId = 28; else if(fz!==0) placeId = 29; }
+    if(!tp && fy===0){ if(fx!==0) placeId = BLOCKS[blockId].logX; else if(fz!==0) placeId = BLOCKS[blockId].logZ; }
   }
   removeFireAt(px,py,pz);
   setB(px,py,pz,placeId); markDirty(px,py,pz,blockId===20);
