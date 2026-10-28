@@ -119,11 +119,12 @@ function getBreakSpeed(bd){
 
   // Catégorie du bloc
   const tTop = bd.tTop || '';
-  const isStone  = ['stone','cobble','iron_ore','coal_ore','gold_ore','diamond_ore',
+  const mat = bd.mat;   // matériau déclaré dans blocks.js (blocs ajoutés) ; sinon liste de textures ci-dessous
+  const isStone  = mat==='stone' || ['stone','cobble','iron_ore','coal_ore','gold_ore','diamond_ore',
                     'furnace_top','furnace_front','bedrock'].includes(tTop);
-  const isWood   = ['log_side','log_top','planks','bookshelf','craft_top','craft_side','chest_top','chest_side'].includes(tTop);
-  const isEarth  = ['dirt','grass_top','grass_side','sand','gravel'].includes(tTop);
-  const isSoft   = ['leaves','wool','glass'].includes(tTop);
+  const isWood   = mat==='wood' || ['log_side','log_top','planks','bookshelf','craft_top','craft_side','chest_top','chest_side'].includes(tTop);
+  const isEarth  = mat==='earth' || ['dirt','grass_top','grass_side','sand','gravel'].includes(tTop);
+  const isSoft   = mat==='soft' || ['leaves','wool','glass'].includes(tTop);
 
   // L'outil est-il le bon pour ce bloc ?
   if(type === 'pick'   && isStone) return tierMult;
