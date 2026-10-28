@@ -1,245 +1,84 @@
 'use strict';
 
 // ════════════════════════════════════════════════
-// FOUR (FURNACE)
+// CRAFTING GRID STATE
 // ════════════════════════════════════════════════
-// Un four = un bloc : l'état (contenu + progression) est rangé par position "x,y,z", comme les coffres.
-// Tous les fours posés cuisent en parallèle ; casser un four fait tomber son contenu (voir doBreak).
-const FURNACES = new Map();   // "x,y,z" → {input, fuel, output, fuelTime, fuelMax, smeltTime, active}
-let FURNACE_CUR = null;       // clé du four dont l'interface est ouverte
-function newFurnaceState(){
-  return {
-    input:  {id:null,n:0},
-    fuel:   {id:null,n:0},
-    output: {id:null,n:0},
-    fuelTime:   0,   // ticks de fuel restants
-    fuelMax:    0,   // ticks max du fuel actuel
-    smeltTime:  0,   // progression de la fonte (0..200)
-    active:     false,
-  };
-}
-function furnaceAt(k){ let F = FURNACES.get(k); if(!F){ F = newFurnaceState(); FURNACES.set(k, F); } return F; }
-function curFurnace(){ return FURNACE_CUR ? furnaceAt(FURNACE_CUR) : null; }
-function openFurnace(x,y,z){ FURNACE_CUR = x+','+y+','+z; furnaceAt(FURNACE_CUR); toggleUI('furnace'); }
-// multijoueur : après une action dans l'interface du four, on envoie son contenu (voir network.js)
-function furnaceChanged(){ if(FURNACE_CUR && typeof mpFurnaceSend==='function') mpFurnaceSend(FURNACE_CUR); }
+const CG=new Array(9).fill(null).map(()=>({id:null,n:0}));
+const ICG=new Array(4).fill(null).map(()=>({id:null,n:0}));
+let craftResult=null;
+let invCraftResult=null;
 
-// Recettes de fonte : id_entrée → id_sortie
-const SMELT_RECIPES = {
-  'raw_iron':  'iron_ingot',
-  'raw_gold':  'gold_ingot',
-  'coal':      null,          // le charbon est un fuel, pas fondable
-  12:          'iron_ingot',  // bloc de fer ore (au cas où)
-  15:          'gold_ingot',
-  3:           8,             // pierre → cobble (au cas où inversé)
-  // aliments
-  'bread':     null,
-};
-
-// Valeur en ticks de fuel (200 ticks = 1 smelt)
-const FUEL_VALUES = {
-  7:           300,   // planches
-  5:           150,   // bois (log)
-  'stick':     100,
-  'coal':      1600,
-  'wooden_pickaxe': 200,
-  'wooden_axe':  200,
-  'wooden_sword':200,
-  'wooden_shovel':200,
-  'wooden_hoe':  200,
-};
-
-function getSmeltResult(id){
-  if(id===null) return null;
-  if(SMELT_RECIPES[id]!==undefined) return SMELT_RECIPES[id];
-  // Vérifier par nom si c'est un item smelable générique
-  return null;
-}
-
-function getFuelTicks(id){
-  if(id===null) return 0;
-  return FUEL_VALUES[id]||0;
-}
-
-// auth = vrai : ce pair simule vraiment (solo, ou hôte). Sinon (client) : seule la progression est animée,
-// le contenu vient des messages de l'hôte (évite de fondre deux fois les mêmes objets).
-function _tickFurnace(F, dt, auth){
-  const ticks = dt*20; // 20 ticks/s
-  if(!auth){
-    if(F.fuelTime>0) F.fuelTime = Math.max(0, F.fuelTime-ticks);
-    if(F.active) F.smeltTime = Math.min(200, F.smeltTime+ticks);
-    return;
+function checkRecipe(gridType){
+  // Compact recipe matching: shift recipe pattern to match wherever it's placed in the grid
+  // This handles e.g. planks in any corner for sticks, etc.
+  function matchGrid(recipeG, gridG, gw){
+    // Build bounding box of non-zero items in recipe
+    const rw=3, rh=3;
+    let rMinC=3,rMaxC=-1,rMinR=3,rMaxR=-1;
+    for(let r=0;r<rh;r++) for(let c=0;c<rw;c++){
+      if(recipeG[r*rw+c]!==0){rMinR=Math.min(rMinR,r);rMaxR=Math.max(rMaxR,r);rMinC=Math.min(rMinC,c);rMaxC=Math.max(rMaxC,c);}
+    }
+    if(rMaxR===-1) return gridG.every(v=>v===null); // empty recipe = empty grid
+    // Build bounding box of non-null items in grid
+    let gMinC=gw,gMaxC=-1,gMinR=Math.ceil(gridG.length/gw),gMaxR=-1;
+    for(let i=0;i<gridG.length;i++){
+      if(gridG[i]!==null){const r=Math.floor(i/gw),c=i%gw;gMinR=Math.min(gMinR,r);gMaxR=Math.max(gMaxR,r);gMinC=Math.min(gMinC,c);gMaxC=Math.max(gMaxC,c);}
+    }
+    if(gMaxR===-1) return false; // grid empty, recipe not
+    // Check size fits
+    if((rMaxR-rMinR)!==(gMaxR-gMinR)||(rMaxC-rMinC)!==(gMaxC-gMinC)) return false;
+    // Compare cell by cell with offset
+    const dr=gMinR-rMinR, dc=gMinC-rMinC;
+    for(let r=rMinR;r<=rMaxR;r++) for(let c=rMinC;c<=rMaxC;c++){
+      const rv=recipeG[r*rw+c];
+      const gi=(r+dr)*gw+(c+dc);
+      const gv=gi<gridG.length?gridG[gi]:null;
+      if(rv===0&&gv!==null) return false;
+      if(rv!==0&&rv!==gv&&!(rv==='#planks'&&gv!==null&&PLANKS_IDS[gv])) return false;   // '#planks' = toutes les planches
+    }
+    return true;
   }
 
-  const result = getSmeltResult(F.input.id);
-  const hasInput = F.input.id!==null && F.input.n>0 && result!==null;
-
-  // Si plus de fuel, essayer d'en consommer un nouveau
-  if(F.fuelTime<=0){
-    if(hasInput && F.fuel.id!==null && F.fuel.n>0){
-      const fticks = getFuelTicks(F.fuel.id);
-      if(fticks>0){
-        F.fuelMax  = fticks;
-        F.fuelTime = fticks;
-        F.fuel.n--;
-        if(F.fuel.n<=0){F.fuel.id=null;F.fuel.n=0;}
-        F.active=true;
-      } else {
-        F.active=false;
-      }
-    } else {
-      F.active=false;
-      F.smeltTime=0;
+  if(gridType==='craft'||gridType===undefined){
+    craftResult=null;
+    const g=CG.map(s=>s.id);
+    for(const r of RECIPES){
+      if(r.n===0) continue;
+      if(matchGrid(r.g, g, 3)){craftResult=r;break;}
     }
   }
-
-  // Décrémenter le fuel si actif
-  if(F.fuelTime>0){
-    F.fuelTime=Math.max(0, F.fuelTime-ticks);
-    F.active=true;
-  }
-
-  // Fondre
-  if(F.active && hasInput){
-    F.smeltTime+=ticks;
-    if(F.smeltTime>=200){
-      F.smeltTime=0;
-      if(result!==null){
-        if(F.output.id===null){
-          F.output.id=result; F.output.n=1;
-        } else if(F.output.id===result && F.output.n<64){
-          F.output.n++;
-        } else {
-          F.smeltTime=200; return; // sortie pleine
-        }
-        F.input.n--;
-        if(F.input.n<=0){F.input.id=null;F.input.n=0;}
+  if(gridType==='invcraft'||gridType===undefined){
+    invCraftResult=null;
+    const g2=[ICG[0].id,ICG[1].id,ICG[2].id,ICG[3].id];
+    // Map 2×2 grid slots to a flat array for matching (gw=2)
+    for(const r of RECIPES){
+      if(r.n===0) continue;
+      // Flatten recipe to 2×2 bounding max — only try if recipe fits in 2×2
+      // First build recipe bounding box
+      let rMinC=3,rMaxC=-1,rMinR=3,rMaxR=-1;
+      for(let row=0;row<3;row++) for(let col=0;col<3;col++){
+        if(r.g[row*3+col]!==0){rMinR=Math.min(rMinR,row);rMaxR=Math.max(rMaxR,row);rMinC=Math.min(rMinC,col);rMaxC=Math.max(rMaxC,col);}
       }
+      if(rMaxR-rMinR>1||rMaxC-rMinC>1) continue; // doesn't fit in 2×2
+      if(matchGrid(r.g, g2, 2)){invCraftResult=r;break;}
     }
-  } else if(!F.active){
-    F.smeltTime=0;
   }
 }
 
-let _furnUiT = 0;
-function updateFurnace(dt){
-  const auth = !(typeof MP!=='undefined' && MP.open && MP.role==='client');
-  for(const [k, F] of FURNACES){
-    const was = F.active;
-    _tickFurnace(F, dt, auth);
-    // un four actif est une source de lumière précalculée : on reconstruit les chunks proches quand il s'allume/s'éteint
-    if(F.active !== was){ const c = k.split(','); markDirty(+c[0], +c[1], +c[2], true); }
+function doCraft(){
+  if(!craftResult) return;
+  addInv(craftResult.r, craftResult.n);
+  for(let i=0;i<9;i++) if(CG[i].id!==null){
+    CG[i].n--; if(CG[i].n<=0){CG[i].id=null;CG[i].n=0;}
   }
-  // Mise à jour UI si ouvert
-  _furnUiT += dt;
-  if(_furnUiT > 0.15 && FURNACE_CUR && document.getElementById('furnace-ui').classList.contains('open')){
-    _furnUiT = 0; drawFurnaceUI();
-  }
-}
-function takeFurnaceOutput(){
-  const F = curFurnace(); if(!F || !F.output.id) return;
-  addInv(F.output.id, F.output.n);
-  F.output.id=null; F.output.n=0;
-  drawFurnaceUI(); drawHotbar(); furnaceChanged();
+  checkRecipe('craft'); drawCraftUI(); drawHotbar();
 }
 
-function renderFurnaceSlot(el, slot){
-  // Vide le contenu sans toucher à l'élément lui-même (preserve listeners)
-  while(el.firstChild) el.removeChild(el.firstChild);
-  if(slot.id!==null){
-    el.appendChild(mkCanvas(slot.id, el===document.getElementById('furnace-output')?44:38));
-    if(slot.n>1){const s=document.createElement('span');s.className='sc';s.textContent=slot.n;el.appendChild(s);}
+function doInvCraft(){
+  if(!invCraftResult) return;
+  addInv(invCraftResult.r, invCraftResult.n);
+  for(let i=0;i<4;i++) if(ICG[i].id!==null){
+    ICG[i].n--; if(ICG[i].n<=0){ICG[i].id=null;ICG[i].n=0;}
   }
-}
-
-function drawFurnaceUI(rebuildInv){
-  const F = curFurnace() || newFurnaceState();   // pas de four sélectionné : affichage vide
-  renderFurnaceSlot(document.getElementById('furnace-input'),  F.input);
-  renderFurnaceSlot(document.getElementById('furnace-fuel'),   F.fuel);
-  renderFurnaceSlot(document.getElementById('furnace-output'), F.output);
-  // Barres
-  const fuelPct = F.fuelMax>0?(F.fuelTime/F.fuelMax*100):0;
-  document.getElementById('furnace-fuel-bar').style.width=fuelPct+'%';
-  document.getElementById('furnace-prog-bar').style.width=(F.smeltTime/200*100)+'%';
-  document.getElementById('furnace-status').textContent = F.active?'🔥 Lit':'⬜ Idle';
-  // Inventaire — ne reconstruire que si explicitement demandé ou si les conteneurs sont vides
-  const mainEl = document.getElementById('furnace-inv-main');
-  const hotbarEl = document.getElementById('furnace-inv-hotbar');
-  if(rebuildInv || mainEl.children.length===0){
-    buildInvRows(mainEl, hotbarEl);
-  } else {
-    // Mise à jour légère : redessiner le contenu de chaque slot sans détruire les éléments
-    const allSlots = mainEl.querySelectorAll('.mc-slot');
-    allSlots.forEach((el, i)=>{
-      const item = P.inv[i];
-      renderSlotEl(el, item);
-    });
-    const hotbarSlots = hotbarEl.querySelectorAll('.mc-slot');
-    hotbarSlots.forEach((el, i)=>{
-      if(i===P.hotbar) el.style.outline='2px solid #fff'; else el.style.outline='';
-      renderSlotEl(el, P.inv[i+27]);
-    });
-  }
-}
-
-function furnaceSlotInteract(slot, e){
-  e.preventDefault(); e.stopPropagation();
-  if(dragItem){
-    const rightClick = e.button===2;
-    if(slot.id===null){
-      if(rightClick){
-        slot.id=dragItem.id; slot.n=1; dragItem.n--;
-        if(dragItem.n<=0){dragItem=null;dragEl.style.display='none';}else renderDragIcon();
-      } else {
-        slot.id=dragItem.id; slot.n=dragItem.n;
-        dragItem=null; dragEl.style.display='none'; dragCnt.textContent='';
-      }
-    } else if(slot.id===dragItem.id && slot.n<64){
-      const add = rightClick ? 1 : Math.min(dragItem.n, 64-slot.n);
-      slot.n+=add; dragItem.n-=add;
-      if(dragItem.n<=0){dragItem=null;dragEl.style.display='none';dragCnt.textContent='';}else renderDragIcon();
-    } else if(!rightClick){
-      // Swap
-      const tmp={id:slot.id,n:slot.n};
-      slot.id=dragItem.id; slot.n=dragItem.n;
-      dragItem=tmp; renderDragIcon(); dragEl.style.display='block';
-    }
-    drawFurnaceUI(false); drawHotbar(); furnaceChanged(); return;
-  }
-  // Pick up
-  if(slot.id===null) return;
-  if(e.button===2){
-    const half=Math.ceil(slot.n/2);
-    dragItem={id:slot.id,n:half}; slot.n-=half;
-    if(slot.n<=0){slot.id=null;slot.n=0;}
-  } else {
-    dragItem={id:slot.id,n:slot.n}; slot.id=null; slot.n=0;
-  }
-  renderDragIcon(); dragEl.style.display='block';
-  dragEl.style.left=mouseX+'px'; dragEl.style.top=mouseY+'px';
-  drawFurnaceUI(false); drawHotbar(); furnaceChanged();
-}
-
-function setupFurnaceSlots(){
-  document.getElementById('furnace-input') .addEventListener('mousedown',e=>{ const F = curFurnace(); if(F) furnaceSlotInteract(F.input, e); });
-  document.getElementById('furnace-fuel')  .addEventListener('mousedown',e=>{ const F = curFurnace(); if(F) furnaceSlotInteract(F.fuel,  e); });
-  document.getElementById('furnace-output').addEventListener('mousedown',e=>{
-    e.preventDefault(); e.stopPropagation();
-    const F = curFurnace(); if(!F || F.output.id===null) return;
-    if(dragItem){
-      // On ne peut que récupérer la sortie, pas y déposer
-      if(dragItem.id===F.output.id && dragItem.n<64){
-        const add=Math.min(F.output.n,64-dragItem.n);
-        dragItem.n+=add; F.output.n-=add;
-        if(F.output.n<=0){F.output.id=null;F.output.n=0;}
-        renderDragIcon();
-      }
-    } else {
-      dragItem={id:F.output.id,n:F.output.n};
-      F.output.id=null;F.output.n=0;
-      renderDragIcon(); dragEl.style.display='block';
-      dragEl.style.left=mouseX+'px'; dragEl.style.top=mouseY+'px';
-    }
-    drawFurnaceUI(false); drawHotbar(); furnaceChanged();
-  });
+  checkRecipe('invcraft'); drawInv(); drawHotbar();
 }
