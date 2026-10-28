@@ -128,6 +128,15 @@ const _drip = addBlock('pointed_dripstone', 'Pointed Dripstone', 'pointed_dripst
   addBlock('pointed_dripstone_' + k, 'Pointed Dripstone', t, t, t, Object.assign({}, _dripP, {variantOf:_drip, drop:_drip}));
 });
 
+// Blocs de métal précieux (posables, minables à la pioche adaptée) — textures iron_block / gold_block / diamond_block
+_all('iron_block',    'Block of Iron',    'iron_block',    {hard:5, mat:'stone', needsPick:1});
+_all('gold_block',    'Block of Gold',    'gold_block',    {hard:3, mat:'stone', needsPick:2});
+_all('diamond_block', 'Block of Diamond', 'diamond_block', {hard:5, mat:'stone', needsPick:2});
+
+// id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
+const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;
+function BID(sid){ const v = _SID[sid]; if(v === undefined) throw new Error('bloc inconnu « '+sid+' »'); return v; }
+
 const ITEMS = {
   stick:         {name:'Stick'},
   wooden_sword:    {name:'Wooden Sword'},
@@ -204,9 +213,6 @@ const ITEMS = {
   oak_slab:     {name:'Oak Slab'},
   stone_stairs:   {name:'Stone Stairs'},
   oak_stairs:    {name:'Oak Stairs'},
-  iron_block:    {name:'Block of Iron'},
-  gold_block:    {name:'Block of Gold'},
-  diamond_block: {name:'Block of Diamond'},
 };
 
 function itemName(id) {
