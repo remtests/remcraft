@@ -36,6 +36,98 @@ const BLOCKS = {
   23:{name:'Water', sid:'water',        tTop:'water',      tSide:'water',       tBot:'water',      hard:100, drop:null, needsPick:0, isCraft:false, noCollide:true, isFluid:true},
 };
 
+// ── Flags ajoutés aux blocs d'origine (le moteur lit ces flags au lieu de comparer des noms de textures) ──
+Object.assign(BLOCKS[5],  {log:true, logX:28, logZ:29, mat:'wood'});          // bûche de chêne : logX/logZ = variantes posées à l'horizontale
+Object.assign(BLOCKS[28], {log:true, axis:'x', tSideR:'log_side_r'});          // axe X : écorce tournée de 90° (tuile générée par l'atlas)
+Object.assign(BLOCKS[29], {log:true, axis:'z', tSideR:'log_side_r'});          // axe Z
+BLOCKS[6].leaves = true;                                                       // feuilles de chêne (cutout + teinte de biome)
+BLOCKS[14].glass = true;                                                       // verre (mesh translucide)
+// Four : côté dédié + face avant orientée (éteinte / allumée). Dessus = furnace_top, dessous = stone (inchangés).
+Object.assign(BLOCKS[21], {tSide:'furnace_side', tFront:'furnace_front', tFrontOn:'furnace_front_on'});
+
+// ════════════════════════════════════════════════
+// BLOCS AJOUTÉS (textures v2) — IDs 30+
+// ════════════════════════════════════════════════
+// Flags : leaves (cutout, teinte), glass (translucide), cross (modèle en croix), axis/logX/logZ (bûches), tFront/tFrontOn (face avant),
+//         mat ('stone'|'wood'|'earth'|'soft' = outil efficace), burn (inflammabilité), variantOf (état interne, absent du créatif).
+// Une texture manquante n'est jamais devinée : le repli est indiqué à côté (ex. dessus de la bûche d'acacia).
+let _nid = 30;
+function addBlock(sid, name, tTop, tSide, tBot, p){
+  const id = _nid++;
+  BLOCKS[id] = Object.assign({name, sid, tTop, tSide, tBot, hard:1, drop:id, needsPick:0, isCraft:false}, p || {});
+  return id;
+}
+const _all = (sid, name, tex, p) => addBlock(sid, name, tex, tex, tex, p);   // même texture sur les 6 faces
+
+// Bois : planches, bûche (+ 2 variantes horizontales), feuilles
+[['spruce','Spruce'], ['birch','Birch'], ['jungle','Jungle'], ['acacia','Acacia'], ['dark_oak','Dark Oak']].forEach(([w, N]) => {
+  _all(w+'_planks', N+' Planks', w+'_planks', {hard:1.5, mat:'wood', burn:0.025});
+  const top = (w === 'acacia') ? 'acacia_planks' : w+'_log_top';   // acacia : pas de texture de dessus fournie → planches en attendant
+  const side = w+'_log_side', sideR = side+'_r';
+  const log = addBlock(w+'_log', N+' Log', top, side, top, {hard:2, mat:'wood', burn:0.015, log:true});
+  BLOCKS[log].logX = addBlock(w+'_log_x', N+' Log', top, side, top, {hard:2, mat:'wood', log:true, variantOf:log, drop:log, axis:'x', tSideR:sideR});
+  BLOCKS[log].logZ = addBlock(w+'_log_z', N+' Log', top, side, top, {hard:2, mat:'wood', log:true, variantOf:log, drop:log, axis:'z', tSideR:sideR});
+  _all(w+'_leaves', N+' Leaves', w+'_leaves', {hard:.4, drop:null, leaves:true, mat:'soft', burn:0.07});
+});
+
+// Pierres
+_all('andesite', 'Andesite', 'andesite', {hard:3, mat:'stone'});
+_all('diorite',  'Diorite',  'diorite',  {hard:3, mat:'stone'});
+_all('granite',  'Granite',  'granite',  {hard:3, mat:'stone'});
+_all('polished_andesite', 'Polished Andesite', 'polished_andesite', {hard:3, mat:'stone'});
+_all('polished_diorite',  'Polished Diorite',  'polished_diorite',  {hard:3, mat:'stone'});
+_all('polished_granite',  'Polished Granite',  'polished_granite',  {hard:3, mat:'stone'});
+_all('tuff', 'Tuff', 'tuff', {hard:3, mat:'stone'});
+const _cobbledDeepslate = _all('cobbled_deepslate', 'Cobbled Deepslate', 'cobbled_deepslate', {hard:6, mat:'stone'});
+_all('deepslate', 'Deepslate', 'deepslate', {hard:6, mat:'stone', drop:_cobbledDeepslate});   // se mine en pavé d'ardoise
+_all('dripstone_block', 'Dripstone Block', 'dripstone_block', {hard:3, mat:'stone'});
+
+// Minerais (drops : objets « lapis » / « redstone » pas encore dans ITEMS → le bloc lui-même en attendant)
+_all('lapis_ore',    'Lapis Lazuli Ore', 'lapis_ore',    {hard:4, mat:'stone', needsPick:1});
+_all('redstone_ore', 'Redstone Ore',     'redstone_ore', {hard:4, mat:'stone', needsPick:2});
+_all('deepslate_iron_ore',     'Deepslate Iron Ore',     'deepslate_iron_ore',     {hard:6, mat:'stone', needsPick:1, drop:'raw_iron'});
+_all('deepslate_gold_ore',     'Deepslate Gold Ore',     'deepslate_gold_ore',     {hard:6, mat:'stone', needsPick:2, drop:'raw_gold'});
+_all('deepslate_diamond_ore',  'Deepslate Diamond Ore',  'deepslate_diamond_ore',  {hard:7, mat:'stone', needsPick:2, drop:'diamond'});
+_all('deepslate_lapis_ore',    'Deepslate Lapis Lazuli Ore', 'deepslate_lapis_ore', {hard:6, mat:'stone', needsPick:1});
+_all('deepslate_redstone_ore', 'Deepslate Redstone Ore', 'deepslate_redstone_ore', {hard:6, mat:'stone', needsPick:2});
+
+// Blocs de métal
+_all('coal_block',       'Block of Coal',   'coal_block',       {hard:5, mat:'stone', needsPick:1});
+_all('copper_block',     'Block of Copper', 'copper_block',     {hard:5, mat:'stone', needsPick:1});
+_all('exposed_copper',   'Exposed Copper',  'exposed_copper',   {hard:5, mat:'stone', needsPick:1});
+_all('weathered_copper', 'Weathered Copper','weathered_copper', {hard:5, mat:'stone', needsPick:1});
+_all('oxidized_copper',  'Oxidized Copper', 'oxidized_copper',  {hard:5, mat:'stone', needsPick:1});
+
+// Terre, sable, argile
+_all('clay',     'Clay',     'clay',     {hard:1, mat:'earth'});
+_all('red_sand', 'Red Sand', 'red_sand', {hard:1, mat:'earth'});
+// Grès : 3 textures (dessus lisse / côté à bande / dessous pavé). Grès rouge : pas de texture de dessous fournie → on réutilise le dessus.
+addBlock('sandstone',     'Sandstone',     'sandstone_top',     'sandstone_side',     'sandstone_bottom', {hard:2, mat:'stone'});
+addBlock('red_sandstone', 'Red Sandstone', 'red_sandstone_top', 'red_sandstone_side', 'red_sandstone_top', {hard:2, mat:'stone'});
+
+// Terracotta (15 couleurs fournies ; pas de rose ni de terracotta nature)
+[['white','White'],['orange','Orange'],['magenta','Magenta'],['light_blue','Light Blue'],['yellow','Yellow'],['lime','Lime'],
+ ['gray','Gray'],['light_gray','Light Gray'],['cyan','Cyan'],['purple','Purple'],['blue','Blue'],['brown','Brown'],
+ ['green','Green'],['red','Red'],['black','Black']].forEach(([c, N]) => _all(c+'_terracotta', N+' Terracotta', c+'_terracotta', {hard:2, mat:'stone'}));
+
+// Glace, neige, slime
+_all('ice',        'Ice',        'ice',        {hard:1,   mat:'stone', glass:true, drop:null});
+_all('packed_ice', 'Packed Ice', 'packed_ice', {hard:1,   mat:'stone', drop:null});
+_all('blue_ice',   'Blue Ice',   'blue_ice',   {hard:5,   mat:'stone', drop:null});
+_all('snow_block', 'Snow Block', 'snow_block', {hard:.5,  mat:'earth'});
+_all('powder_snow','Powder Snow','powder_snow',{hard:.5,  mat:'earth', drop:null});
+addBlock('snowy_grass_block', 'Snowy Grass Block', 'snow_block', 'snowy_grass_side', 'dirt', {hard:1, mat:'earth', drop:2});   // dessus = neige, côtés = herbe enneigée, dessous = terre
+_all('slime_block', 'Slime Block', 'slime_block', {hard:.3, mat:'soft', glass:true});
+
+// Stalactite / stalagmite : 5 états d'épaisseur (tip_merge, tip, frustum, middle, base), rendus en croix comme les plantes.
+// Un seul bloc visible dans le créatif (la pointe) ; les 4 autres sont des états internes (variantOf), à choisir selon les voisins.
+const _dripP = {hard:3, mat:'stone', cross:true, noCollide:true};
+const _drip = addBlock('pointed_dripstone', 'Pointed Dripstone', 'pointed_dripstone_tip', 'pointed_dripstone_tip', 'pointed_dripstone_tip', _dripP);
+['tip_merge','frustum','middle','base'].forEach(k => {
+  const t = 'pointed_dripstone_' + k;
+  addBlock('pointed_dripstone_' + k, 'Pointed Dripstone', t, t, t, Object.assign({}, _dripP, {variantOf:_drip, drop:_drip}));
+});
+
 const ITEMS = {
   stick:         {name:'Stick'},
   wooden_sword:    {name:'Wooden Sword'},
