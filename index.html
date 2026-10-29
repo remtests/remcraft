@@ -74,8 +74,11 @@
 </div>
 
 <div id="create-world">
+  <div class="cw-layout">
   <div class="cw-panel">
     <div class="cw-title">Create New World</div>
+    <div class="cw-lab">World Name</div>
+    <input id="cw-name" class="cw-text" type="text" maxlength="32" autocomplete="off" spellcheck="false" placeholder="New World">
     <button class="mc-btn" id="cw-mode" onclick="cwCycle('mode')"></button>
     <div class="cw-desc" id="cw-mode-desc"></div>
     <button class="mc-btn" id="cw-type" onclick="cwCycle('type')"></button>
@@ -91,11 +94,19 @@
       <button class="mc-btn" onclick="cancelCreateWorld()">Cancel</button>
     </div>
   </div>
+  <div class="cw-panel cw-saves">
+    <div class="cw-title">Saved Worlds</div>
+    <div id="ws-list"></div>
+    <div class="cw-desc" id="ws-msg"></div>
+    <div class="cw-desc">Worlds are saved in this browser (localStorage). Clearing site data deletes them.</div>
+  </div>
+  </div>
 </div>
 
 <div id="pause">
   <h2>GAME PAUSED</h2>
   <button onclick="resume()">▶ Back to Game</button>
+  <button onclick="wsQuitToTitle()">💾 Save &amp; Quit to Title</button>
   <div style="border-top:1px solid #444;padding-top:12px;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:min(520px,90vw);">
     <span style="color:#aaa;font-size:13px;letter-spacing:2px;">👤 USERNAME</span>
     <input id="pause-username" type="text" maxlength="16" autocomplete="off" spellcheck="false" oninput="setUsername(this.value,this)" onblur="this.value=MP.name" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()">
@@ -301,6 +312,7 @@
 <script src="js/ui/inventory-preview.js"></script>
 <script src="js/core/main-loop.js"></script>
 <script src="js/core/world-start.js"></script>
+<script src="js/core/world-saves.js"></script>
 <script src="js/multiplayer/network.js"></script>
 <script src="js/multiplayer/remote-players.js"></script>
 <script src="js/data/texture-manifest.js"></script>
