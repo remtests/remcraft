@@ -33,13 +33,10 @@
   display:none;z-index:100;border-radius:2px;}
 #efill{height:100%;background:#f80;width:0%;border-radius:2px;transition:width .05s;}
 
-/* ── PAUSE ── */
-#pause{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;
-  align-items:center;justify-content:center;z-index:300;flex-direction:column;gap:16px;}
-#pause h2{color:#fff;font-size:32px;letter-spacing:4px;}
-#pause button,#death button{background:#555;border:2px solid #777;color:#fff;font-size:16px;
+/* ── PAUSE ── (même style que le menu principal et l'écran de création : voir world-creation.css) ── */
+#death button{background:#555;border:2px solid #777;color:#fff;font-size:16px;
   padding:10px 32px;cursor:pointer;font-family:inherit;letter-spacing:1px;}
-#pause button:hover,#death button:hover{background:#777;}
+#death button:hover{background:#777;}
 
 /* ── CHAT ── */
 #chat{position:fixed;left:8px;bottom:78px;width:min(560px,70vw);z-index:150;font-size:13px;pointer-events:none;}
@@ -66,7 +63,6 @@
 #clk{position:fixed;top:8px;right:8px;color:#fff;font-size:13px;pointer-events:none;
   z-index:100;text-shadow:1px 1px #000;display:none;}
 
-#pause-fps{color:#aaa;font-size:13px;margin-top:4px;font-family:'Courier New',monospace;}
 
 .mc-slot[data-ph]:empty::before{content:attr(data-ph);display:block;text-align:center;line-height:40px;font-size:20px;opacity:.35;}
 
