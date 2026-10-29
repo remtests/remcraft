@@ -89,6 +89,7 @@ function wsPlay(id){
   resetNoiseCaches();
   MP.edits.clear(); CHESTS.clear(); CHEST_DIR.clear(); FURNACES.clear();
   WS.cur = id; WS.pending = st;
+  document.getElementById('world-select').style.display = 'none';
   document.getElementById('create-world').style.display = 'none';
   handlePlayBtn().then(wsAfterStart);
 }
@@ -189,7 +190,7 @@ function wsRenderList(){
   box.textContent = '';
   const worlds = wsReadIndex().sort((a,b) => (b.played||0)-(a.played||0));
   if(!worlds.length){
-    const e = document.createElement('div'); e.className = 'ws-empty'; e.textContent = 'No saved worlds yet. Create one on the left!'; box.appendChild(e); return;
+    const e = document.createElement('div'); e.className = 'ws-empty'; e.textContent = 'No saved worlds yet. Click "Create New World" below to start.'; box.appendChild(e); return;
   }
   for(const w of worlds){
     const item = document.createElement('div'); item.className = 'ws-item';
