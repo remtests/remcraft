@@ -94,6 +94,7 @@ function updateClouds(dt){
 
 // Soleil/lune : plaques fixes dans le repère du monde, tangentes à la voûte céleste (plus de billboard orienté vers la caméra).
 // Repère de la plaque : z local = vers le centre du ciel (le joueur), y local = vers le pôle céleste (axe +Z du monde, autour duquel tourne le ciel).
+const MOON_ROLL=Math.PI/2, _skRoll=new THREE.Quaternion(), _skZ=new THREE.Vector3(0,0,1);   // rotation de la lune sur elle-même (rad) ; passer à -Math.PI/2 pour tourner dans l'autre sens
 const _skN=new THREE.Vector3(), _skU=new THREE.Vector3(), _skR=new THREE.Vector3(), _skM=new THREE.Matrix4(), _skPole=new THREE.Vector3(0,0,1);
 function _orientSky(mesh, dir){   // dir : direction (unitaire) du centre du ciel vers l'astre
   _skN.copy(dir).negate();                                   // la face avant de la plaque regarde le joueur
@@ -113,6 +114,7 @@ function updateSkyBodies(){
   if(moonObj){
     moonObj.m.position.copy(camera.position).addScaledVector(_sd,-SKY_D);
     _skN.copy(_sd).negate(); _orientSky(moonObj.m,_skN);   // la lune est à l'opposé du soleil
+    moonObj.m.quaternion.multiply(_skRoll.setFromAxisAngle(_skZ,MOON_ROLL));   // quart de tour autour de la normale de la plaque (axe z local)
     moonObj.m.visible=_sd.y<0.25;
   }
 }
