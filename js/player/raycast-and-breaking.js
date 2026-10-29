@@ -153,5 +153,4 @@ function getBreakSpeed(bd){
   // Mains nues : vitesse de base
   return 1.0;
 }
-
 // ── Casse de bloc ────────────────────────────────
