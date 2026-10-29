@@ -229,7 +229,7 @@ function buildChunkMesh(cx,cz){
         else if(isChestB){ if(F.t===1 && OPAQUE[nb]) continue; }          // coffre : toutes les faces en retrait, sauf le dessous posé sur un bloc plein
         else {
           if(OPAQUE[nb]) continue;
-          if(nb===bid && !isOpq) continue;       // feuilles/verre/eau contre le même bloc
+          if(nb===bid && !isOpq && !IS_LEAF[bid]) continue;       // verre/eau contre le même bloc ; EXCEPTION feuillage : toutes les faces sont gardées entre deux feuilles adjacentes (donne du volume aux arbres)
         }
         let tile = F.t===0 ? TILE_TOP[bid] : F.t===1 ? TILE_BOT[bid] : TILE_SIDE[bid];
         if(AXIS[bid]){   // bûche horizontale (tous les bois) : extrémités = anneaux ; écorce tournée pour que les fibres suivent l'axe
