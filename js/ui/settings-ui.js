@@ -29,14 +29,6 @@ const SETTING_DEFS = [
 ];
 const _setUI = {};
 function buildSettingsUI(){
-  const st = document.createElement('style');
-  st.textContent =
-    '#pause-settings{display:flex;flex-direction:column;gap:5px;width:440px;max-width:92vw;padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid #444}'+
-    '.set-row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:#ccc}'+
-    '.set-row label{flex:1}.set-row input[type=range]{width:150px}.set-val{width:84px;text-align:right;color:#8f8;font-size:11px}'+
-    '.set-row select{background:#555;color:#fff;border:1px solid #777;padding:2px}'+
-    '.set-cy{min-width:96px}.set-tg{background:#555!important;border:1px solid #777!important;padding:2px 14px!important;font-size:12px!important}.set-tg.on{background:#4a7!important}';
-  document.head.appendChild(st);
   const box = document.getElementById('pause-settings');
   if(!box) return;
   for(const def of SETTING_DEFS){
