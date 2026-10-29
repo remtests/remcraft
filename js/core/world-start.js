@@ -87,6 +87,28 @@ function placeBonusChest(sx, sz, sbm){
   return false;
 }
 
+// ── Apparition sûre : jamais dans un bloc solide (tronc, feuillage, construction…) ──
+// Solide = tout bloc qui collisionne (l'eau, l'herbe haute, les torches… ne comptent pas)
+const spawnSolid = id => id!==0 && !(BLOCKS[id] && BLOCKS[id].noCollide);
+// y = bloc sur lequel se tient le joueur : sol réel (ni feuilles, ni tronc, ni cactus), puis 2 blocs libres et hors de l'eau
+function spawnGroundOk(x, y, z){
+  const g = getB(x,y,z), gb = BLOCKS[g];
+  if(!spawnSolid(g) || (gb && (gb.leaves || gb.log)) || g===22) return false;
+  const a = getB(x,y+1,z), b = getB(x,y+2,z);
+  return !spawnSolid(a) && !spawnSolid(b) && a!==23 && b!==23;
+}
+// Cherche, en spirale autour de (x,z) sur maxR blocs, la colonne libre la plus proche ; renvoie {x,z,y} (y = bloc libre où poser les pieds) ou null
+function findSafeSpawn(x, z, maxR){
+  for(let r=0; r<=maxR; r++){
+    for(let dx=-r; dx<=r; dx++) for(let dz=-r; dz<=r; dz++){
+      if(Math.max(Math.abs(dx), Math.abs(dz)) !== r) continue;
+      const cx = x+dx, cz = z+dz, h = getBiomeData(cx,cz).h;
+      for(let y=Math.min(Y_MAX-3, h+14); y>=Math.max(Y_MIN+1, h-6); y--) if(spawnGroundOk(cx,y,cz)) return {x:cx, z:cz, y:y+1};
+    }
+  }
+  return null;
+}
+
 async function handlePlayBtn(){
   document.getElementById('overlay').style.display='none';
   const ls = document.getElementById('loadscreen');
@@ -96,14 +118,24 @@ async function handlePlayBtn(){
   prog(5,'Initializing engine…'); await nextFrame();
 
   // point d'apparition : ni océan ni montagne
-  let sx, sz, sbm;
-  if(MP.spawn){ sx = MP.spawn.sx; sz = MP.spawn.sz; sbm = getBiomeData(sx, sz); }   // multijoueur : on apparaît au même endroit que l'hôte
-  else if(WS.pending && isFinite(WS.pending.p && WS.pending.p.x) && isFinite(WS.pending.p && WS.pending.p.z)){ sx = Math.floor(WS.pending.p.x); sz = Math.floor(WS.pending.p.z); sbm = getBiomeData(sx, sz); }   // monde sauvegardé : on revient où on s'était arrêté
-  else do {
-    sx = Math.floor((Math.random()-0.5)*800);
-    sz = Math.floor((Math.random()-0.5)*800);
+  let sx, sz, sbm, sy;   // sy : hauteur d'apparition sûre (undefined = ancienne méthode, terrain + 3)
+  if(MP.spawn){   // multijoueur : on apparaît au même endroit que l'hôte (ou au plus près si l'endroit est occupé)
+    sx = MP.spawn.sx; sz = MP.spawn.sz;
+    const safe = findSafeSpawn(sx, sz, 8);
+    if(safe){ sx = safe.x; sz = safe.z; sy = safe.y+0.05; }
     sbm = getBiomeData(sx, sz);
-  } while(sbm.h < 4 || sbm.type === 2);
+  }
+  else if(WS.pending && isFinite(WS.pending.p && WS.pending.p.x) && isFinite(WS.pending.p && WS.pending.p.z)){ sx = Math.floor(WS.pending.p.x); sz = Math.floor(WS.pending.p.z); sbm = getBiomeData(sx, sz); }   // monde sauvegardé : on revient où on s'était arrêté
+  else {
+    let safe = null;
+    do {
+      sx = Math.floor((Math.random()-0.5)*800);
+      sz = Math.floor((Math.random()-0.5)*800);
+      sbm = getBiomeData(sx, sz);
+      safe = (sbm.h < 4 || sbm.type === 2) ? null : findSafeSpawn(sx, sz, 4);   // ni océan ni montagne, et pas dans un arbre
+    } while(!safe);
+    sx = safe.x; sz = safe.z; sy = safe.y+0.05; sbm = getBiomeData(sx, sz);
+  }
   const scx = Math.floor(sx/CSIZ), scz = Math.floor(sz/CSIZ);
 
   // pré-construction des chunks proches (du plus proche au plus loin), avec vraie progression
@@ -122,13 +154,13 @@ async function handlePlayBtn(){
   }
   prog(100,'Ready!'); await nextFrame();
   ls.style.display='none';
-  startGame(sx, sz, sbm);
+  startGame(sx, sz, sbm, sy);
 }
 
-function startGame(sx, sz, sbm){
+function startGame(sx, sz, sbm, sy){
   fireReset();
   gameOn=true; addChat(WORLD.cheats ? 'Press T to chat, / to type a command (/help).' : 'Press T to chat.', '#ffff55');
-  P.x = sx+0.5; P.z = sz+0.5; P.y = sbm.h+3;
+  P.x = sx+0.5; P.z = sz+0.5; P.y = (sy!==undefined) ? sy : sbm.h+3;
   P.px = P.x; P.py = P.y; P.pz = P.z;
   svInit(P.x, P.z);   // vie, faim, point de réapparition
   document.getElementById('cross').style.display='block';
