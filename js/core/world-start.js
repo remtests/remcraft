@@ -36,6 +36,7 @@ function showCreateWorld(){
   document.getElementById('overlay').style.display = 'none';
   document.getElementById('create-world').style.display = 'flex';
   cwRefresh();
+  wsListMsg(''); wsRenderList();
 }
 function cancelCreateWorld(){
   document.getElementById('create-world').style.display = 'none';
@@ -49,8 +50,9 @@ function createWorld(){
   WORLD.type = CW.type; WORLD.mode = WORLD.baseMode = CW.mode; WORLD.bonus = CW.bonus; WORLD.cheats = CW.cheats;
   BIOME_SCALE = CW.type==='large' ? 4 : 1;
   resetNoiseCaches();
+  wsNewWorld(document.getElementById('cw-name').value);
   document.getElementById('create-world').style.display = 'none';
-  handlePlayBtn();
+  handlePlayBtn().then(()=>wsAfterStart());   // première sauvegarde (position d'apparition comprise)
 }
 
 function resetNoiseCaches(){ _permCache.clear(); _lpSeed = -1; _lpPerm = null; _rawCache.clear(); _nodeCache.clear(); }
@@ -96,6 +98,7 @@ async function handlePlayBtn(){
   // point d'apparition : ni océan ni montagne
   let sx, sz, sbm;
   if(MP.spawn){ sx = MP.spawn.sx; sz = MP.spawn.sz; sbm = getBiomeData(sx, sz); }   // multijoueur : on apparaît au même endroit que l'hôte
+  else if(WS.pending && isFinite(WS.pending.p && WS.pending.p.x) && isFinite(WS.pending.p && WS.pending.p.z)){ sx = Math.floor(WS.pending.p.x); sz = Math.floor(WS.pending.p.z); sbm = getBiomeData(sx, sz); }   // monde sauvegardé : on revient où on s'était arrêté
   else do {
     sx = Math.floor((Math.random()-0.5)*800);
     sz = Math.floor((Math.random()-0.5)*800);
@@ -107,6 +110,7 @@ async function handlePlayBtn(){
   const R0 = Math.min(S.renderDist, 3), list = [];
   for(let dx=-R0;dx<=R0;dx++) for(let dz=-R0;dz<=R0;dz++) if(dx*dx+dz*dz<=(R0+0.5)*(R0+0.5)) list.push([dx,dz]);
   list.sort((a,b)=>(a[0]*a[0]+a[1]*a[1])-(b[0]*b[0]+b[1]*b[1]));
+  await wsApplyPending(prog);   // monde sauvegardé : rejoue les blocs modifiés, coffres et fours
   prog(10,'Generating terrain…'); await nextFrame();
   let t0 = performance.now();
   for(let i=0;i<list.length;i++){
