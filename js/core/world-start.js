@@ -32,15 +32,26 @@ function cwCycle(k){
   else CW.bonus = !CW.bonus;
   cwRefresh();
 }
+// Play → liste des mondes (plein écran) ; « Create New World » en bas → écran de création ; Cancel → retour à la liste
+function showWorldSelect(){
+  document.getElementById('overlay').style.display = 'none';
+  document.getElementById('create-world').style.display = 'none';
+  document.getElementById('world-select').style.display = 'flex';
+  wsListMsg(''); wsRenderList();
+}
+function closeWorldSelect(){
+  document.getElementById('world-select').style.display = 'none';
+  document.getElementById('overlay').style.display = 'flex';
+}
 function showCreateWorld(){
   document.getElementById('overlay').style.display = 'none';
+  document.getElementById('world-select').style.display = 'none';
   document.getElementById('create-world').style.display = 'flex';
   cwRefresh();
-  wsListMsg(''); wsRenderList();
 }
 function cancelCreateWorld(){
   document.getElementById('create-world').style.display = 'none';
-  document.getElementById('overlay').style.display = 'flex';
+  showWorldSelect();
 }
 function createWorld(){
   const txt = document.getElementById('cw-seed').value.trim();
