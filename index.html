@@ -37,7 +37,7 @@
   <div id="mc-menu-panel">
     <div id="mc-logo">MINE<span>CRAFT</span></div>
     <div id="mc-user"><label for="username-in">Username</label><input id="username-in" type="text" maxlength="16" autocomplete="off" spellcheck="false" oninput="setUsername(this.value,this)" onblur="this.value=MP.name" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()"></div>
-    <button class="mc-btn mc-btn-green" onclick="showCreateWorld()">Play</button>
+    <button class="mc-btn mc-btn-green" onclick="showWorldSelect()">Play</button>
     <button class="mc-btn" onclick="mpShow()">Multiplayer (beta)</button>
     <button class="mc-btn" onclick="document.getElementById('skin-file').click()">Import Skin</button>
     <input type="file" id="skin-file" accept="image/png" style="display:none" onchange="importSkinFile(this.files[0]); this.value='';">
@@ -73,8 +73,19 @@
   </div>
 </div>
 
+<!-- SÉLECTION DU MONDE : liste plein écran, « Create New World » en bas -->
+<div id="world-select">
+  <div class="ws-head">Select World</div>
+  <div id="ws-list"></div>
+  <div class="cw-desc" id="ws-msg"></div>
+  <div class="ws-foot">
+    <button class="mc-btn mc-btn-green" onclick="showCreateWorld()">Create New World</button>
+    <button class="mc-btn" onclick="closeWorldSelect()">Back</button>
+    <div class="cw-desc">Worlds are saved in this browser (localStorage). Clearing site data deletes them.</div>
+  </div>
+</div>
+
 <div id="create-world">
-  <div class="cw-layout">
   <div class="cw-panel">
     <div class="cw-title">Create New World</div>
     <div class="cw-lab">World Name</div>
@@ -93,13 +104,6 @@
       <button class="mc-btn mc-btn-green" onclick="createWorld()">Create New World</button>
       <button class="mc-btn" onclick="cancelCreateWorld()">Cancel</button>
     </div>
-  </div>
-  <div class="cw-panel cw-saves">
-    <div class="cw-title">Saved Worlds</div>
-    <div id="ws-list"></div>
-    <div class="cw-desc" id="ws-msg"></div>
-    <div class="cw-desc">Worlds are saved in this browser (localStorage). Clearing site data deletes them.</div>
-  </div>
   </div>
 </div>
 
