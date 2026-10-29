@@ -3,6 +3,19 @@
 // ════════════════════════════════════════════════
 // RAYCAST — parcours de voxels exact (DDA), ~10× moins de lectures qu'un pas de 0.04
 // ════════════════════════════════════════════════
+// Boîte réelle de la torche : 2×10×2 px (x/z de 7/16 à 9/16, y de 0 à 10/16), légèrement élargie comme le contour de sélection
+function _rayHitsTorch(bx,by,bz,ox,oy,oz,dx,dy,dz,maxD){
+  const lo=[bx+0.4325,by-0.0025,bz+0.4325], hi=[bx+0.5675,by+0.6275,bz+0.5675], o=[ox,oy,oz], d=[dx,dy,dz];
+  let t0=0, t1=maxD;
+  for(let i=0;i<3;i++){
+    if(d[i]===0){ if(o[i]<lo[i]||o[i]>hi[i]) return false; continue; }
+    let a=(lo[i]-o[i])/d[i], b=(hi[i]-o[i])/d[i];
+    if(a>b){ const c=a; a=b; b=c; }
+    if(a>t0) t0=a; if(b<t1) t1=b;
+    if(t0>t1) return false;
+  }
+  return true;
+}
 function castRay(maxD=6){
   const cp=Math.cos(P.pitch),sp=Math.sin(P.pitch);
   const cyw=Math.cos(P.yaw),syw=Math.sin(P.yaw);
@@ -22,6 +35,7 @@ function castRay(maxD=6){
     else {t=tmz;tmz+=tdz;bz+=stz;}
     if(t>maxD) return null;
     const b=getB(bx,by,bz);
+    if(b===20 && !_rayHitsTorch(bx,by,bz,ox,oy,oz,dx,dy,dz,maxD)) continue;   // torche : seule la tige (2×10×2 px) est ciblable, le reste de la case laisse passer le rayon
     if(b&&BLOCKS[b]&&!BLOCKS[b].isFluid) return{bx,by,bz,bid:b,pbx:lx,pby:ly,pbz:lz};
   }
   return null;
@@ -52,7 +66,7 @@ function _initBreakMesh(){
 }
 
 // Taille de la boîte de sélection selon le bloc : [échelle x/z, échelle y, hauteur du centre]
-function _boxFor(bid){ return bid===27 ? [0.875,0.875,0.4375] : bid===22 ? [0.875,1,0.5] : [1,1,0.5]; }
+function _boxFor(bid){ return bid===20 ? [0.13,0.63,0.315] : bid===27 ? [0.875,0.875,0.4375] : bid===22 ? [0.875,1,0.5] : [1,1,0.5]; }   // torche : 2×10×2 px
 function _showBreak(bx, by, bz, stage){
   if(!_breakMesh) _initBreakMesh();
   const s = Math.max(0, Math.min(9, stage));
