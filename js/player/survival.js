@@ -110,7 +110,10 @@ function svRespawn(){
   SV.dead = false; svResetStats();
   for(const k in K) K[k] = false;
   const sp = SV.spawn || {x:P.x, z:P.z}, bm = getBiomeData(Math.floor(sp.x), Math.floor(sp.z));
-  P.x = sp.x; P.z = sp.z; P.y = bm.h + 3; P.px = P.x; P.py = P.y; P.pz = P.z;
+  P.x = sp.x; P.z = sp.z; P.y = bm.h + 3;
+  const safe = findSafeSpawn(Math.floor(sp.x), Math.floor(sp.z), 8);   // pas dans un arbre ni une construction
+  if(safe){ P.x = safe.x+0.5; P.z = safe.z+0.5; P.y = safe.y+0.05; }
+  P.px = P.x; P.py = P.y; P.pz = P.z;
   P.vx = P.vy = P.vz = 0; P.sx = P.sz = 0; P.fly = false; P.onGround = false;
   document.getElementById('death').style.display = 'none';
   document.getElementById('hud').style.visibility = '';
