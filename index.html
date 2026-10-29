@@ -104,20 +104,21 @@
 </div>
 
 <div id="pause">
-  <h2>GAME PAUSED</h2>
-  <button onclick="resume()">▶ Back to Game</button>
-  <button onclick="wsQuitToTitle()">💾 Save &amp; Quit to Title</button>
-  <div style="border-top:1px solid #444;padding-top:12px;display:flex;flex-direction:column;align-items:center;gap:8px;max-width:min(520px,90vw);">
-    <span style="color:#aaa;font-size:13px;letter-spacing:2px;">👤 USERNAME</span>
+  <div class="cw-panel pause-panel">
+    <div class="cw-title">Game Menu</div>
+    <button class="mc-btn mc-btn-green" onclick="resume()">Back to Game</button>
+    <button class="mc-btn" onclick="wsQuitToTitle()">Save &amp; Quit to Title</button>
+
+    <div class="pause-sec">Username</div>
     <input id="pause-username" type="text" maxlength="16" autocomplete="off" spellcheck="false" oninput="setUsername(this.value,this)" onblur="this.value=MP.name" onkeydown="event.stopPropagation()" onkeyup="event.stopPropagation()">
-    <span style="color:#aaa;font-size:13px;letter-spacing:2px;margin-top:6px;">🌐 MULTIPLAYER</span>
-    <div id="pause-mp-info" style="color:#ccc;font-size:12px;text-align:center;"></div>
-    <button id="pause-mp-btn" onclick="mpPauseBtn()">Open to friends</button>
-  </div>
-  <div style="border-top:1px solid #444;padding-top:12px;display:flex;flex-direction:column;align-items:center;gap:8px;">
-    <span style="color:#aaa;font-size:13px;letter-spacing:2px;">⚙ VIDEO SETTINGS</span>
+
+    <div class="pause-sec">Multiplayer</div>
+    <div id="pause-mp-info" class="cw-desc"></div>
+    <button class="mc-btn" id="pause-mp-btn" onclick="mpPauseBtn()">Open to friends</button>
+
+    <div class="pause-sec">Video Settings</div>
     <div id="pause-settings"></div>
-    <div id="pause-fps" style="color:#aaa;font-size:12px;">FPS: —</div>
+    <div id="pause-fps">FPS: —</div>
   </div>
 </div>
 
