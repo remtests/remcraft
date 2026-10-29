@@ -23,21 +23,29 @@
 .item-drop canvas{image-rendering:pixelated;border:1px solid rgba(255,255,255,.3);
   box-shadow:0 0 6px rgba(255,220,0,.4);}
 
-/* ── Mondes sauvegardés (liste à droite) ── */
-.cw-layout{display:flex;flex-direction:row;align-items:flex-start;justify-content:center;gap:32px;max-width:96vw;max-height:96vh;}
-.cw-saves{width:min(460px,92vw);}
-#ws-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:70vh;margin-bottom:8px;}
-.ws-empty{font-size:12px;color:#a0a0a0;text-align:center;padding:24px 8px;border:2px solid #333;}
-.ws-item{display:flex;flex-direction:column;gap:6px;padding:8px;background:#1a1a1a;border:2px solid #555;}
-.ws-name{font-size:14px;font-weight:bold;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.ws-sub{font-size:11px;color:#a0a0a0;}
-.ws-btns{display:flex;gap:6px;}
-.ws-btn{flex:1;padding:6px 0;font:inherit;font-size:12px;font-weight:bold;color:#fff;background:#555;border:none;cursor:pointer;text-shadow:1px 1px 0 #000;}
-.ws-btn:hover{background:#6b6b6b;}
-.ws-play{background:#3b8526;} .ws-play:hover{background:#4aa32f;}
+/* ── SÉLECTION DU MONDE (Play) : liste plein écran, bouton « Create New World » en bas ── */
+#world-select{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;z-index:410;color:#fff;
+  background:#000;font-family:'Courier New',monospace;padding:18px 0 14px;}
+.ws-head{font-size:18px;font-weight:bold;letter-spacing:2px;text-align:center;margin-bottom:14px;text-shadow:2px 2px #000;}
+#ws-list{flex:1 1 auto;min-height:0;width:min(720px,94vw);overflow-y:auto;display:flex;flex-direction:column;gap:6px;
+  padding:8px;background:rgba(255,255,255,.05);border:2px solid #333;}
+#ws-msg{margin:6px 0 0;}
+.ws-foot{width:min(420px,92vw);flex:0 0 auto;display:flex;flex-direction:column;align-items:stretch;margin-top:8px;}
+.ws-foot .mc-btn{width:100%;box-sizing:border-box;}
+.ws-empty{font-size:13px;color:#a0a0a0;text-align:center;padding:48px 8px;}
+.ws-item{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;background:#1a1a1a;border:2px solid #555;}
+.ws-item:hover{border-color:#a0a0a0;}
+.ws-info{flex:1 1 auto;min-width:0;}
+.ws-name{font-size:15px;font-weight:bold;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ws-sub{font-size:11px;color:#a0a0a0;margin-top:3px;}
+.ws-btns{display:flex;gap:6px;flex:0 0 auto;}
+.ws-btn{width:84px;padding:8px 0;font:inherit;font-size:12px;font-weight:bold;color:#fff;background:#555;border:none;cursor:pointer;text-shadow:1px 1px 0 #000;
+  box-shadow:inset 0 -3px 0 rgba(0,0,0,.4),inset 0 3px 0 rgba(255,255,255,.15),inset 3px 0 0 rgba(255,255,255,.08),inset -3px 0 0 rgba(0,0,0,.2);}
+.ws-btn:hover{filter:brightness(1.15);}
+.ws-play{background:#5a8a3a;}
 .ws-del:hover{background:#a33;}
-.ws-input{width:100%;box-sizing:border-box;background:#000;border:2px solid #fff;color:#fff;font:inherit;font-size:13px;padding:3px 6px;outline:none;}
-@media (max-width:900px){ #create-world{overflow-y:auto;justify-content:flex-start;} .cw-layout{flex-direction:column;align-items:center;max-height:none;padding:12px 0;} #ws-list{max-height:none;} }
+.ws-input{width:100%;box-sizing:border-box;background:#000;border:2px solid #fff;color:#fff;font:inherit;font-size:13px;padding:4px 6px;outline:none;}
+@media (max-width:640px){ .ws-item{flex-direction:column;align-items:stretch;} .ws-btns{justify-content:stretch;} .ws-btn{flex:1;width:auto;} }
 
 /* ── MENU PAUSE (Échap en jeu) : même habillage que le menu principal ── */
 #pause{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:300;
