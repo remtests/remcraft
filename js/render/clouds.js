@@ -92,17 +92,27 @@ function updateClouds(dt){
   _clMat.color.setRGB(r,g,b);
 }
 
+// Soleil/lune : plaques fixes dans le repère du monde, tangentes à la voûte céleste (plus de billboard orienté vers la caméra).
+// Repère de la plaque : z local = vers le centre du ciel (le joueur), y local = vers le pôle céleste (axe +Z du monde, autour duquel tourne le ciel).
+const _skN=new THREE.Vector3(), _skU=new THREE.Vector3(), _skR=new THREE.Vector3(), _skM=new THREE.Matrix4(), _skPole=new THREE.Vector3(0,0,1);
+function _orientSky(mesh, dir){   // dir : direction (unitaire) du centre du ciel vers l'astre
+  _skN.copy(dir).negate();                                   // la face avant de la plaque regarde le joueur
+  _skU.copy(_skPole).addScaledVector(_skN, -_skPole.dot(_skN)).normalize();
+  _skR.crossVectors(_skU,_skN);
+  _skM.makeBasis(_skR,_skU,_skN);
+  mesh.quaternion.setFromRotationMatrix(_skM);
+}
 function updateSkyBodies(){
   if(!skyScene) return;
   setMoonPhase(dayCount%8);
   if(sunObj){
     sunObj.m.position.copy(camera.position).addScaledVector(_sd,SKY_D);
-    sunObj.m.quaternion.copy(camera.quaternion);
+    _orientSky(sunObj.m,_sd);
     sunObj.m.visible=_sd.y>-0.25;
   }
   if(moonObj){
     moonObj.m.position.copy(camera.position).addScaledVector(_sd,-SKY_D);
-    moonObj.m.quaternion.copy(camera.quaternion);
+    _skN.copy(_sd).negate(); _orientSky(moonObj.m,_skN);   // la lune est à l'opposé du soleil
     moonObj.m.visible=_sd.y<0.25;
   }
 }
