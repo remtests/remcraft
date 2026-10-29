@@ -83,5 +83,5 @@ addEventListener('pointerlockchange',()=>{
   if(!document.pointerLockElement&&gameOn&&!uiOn&&!paused&&!SV.dead) doPause();
 });
 
-function doPause(){paused=true;document.exitPointerLock();document.getElementById('pause').style.display='flex';mpRefreshPause();}
+function doPause(){paused=true;if(typeof wsSave==='function')wsSave();document.exitPointerLock();document.getElementById('pause').style.display='flex';mpRefreshPause();}
 function resume(){paused=false;document.getElementById('pause').style.display='none';lockPtr();}
