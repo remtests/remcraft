@@ -128,6 +128,10 @@ function wsAfterStart(){
     if(isFinite(p.x) && isFinite(p.y) && isFinite(p.z) && Math.abs(p.x)<1e7 && Math.abs(p.z)<1e7){
       P.x = p.x; P.y = p.y; P.z = p.z; P.px = P.x; P.py = P.y; P.pz = P.z; P.vx = P.vy = P.vz = 0;
     }
+    if(spawnSolid(getB(P.x, P.y, P.z)) || spawnSolid(getB(P.x, P.y+1, P.z))){   // position sauvegardée devenue solide (ex. génération du terrain modifiée)
+      const safe = findSafeSpawn(Math.floor(P.x), Math.floor(P.z), 8);
+      if(safe){ P.x = safe.x+0.5; P.z = safe.z+0.5; P.y = safe.y+0.05; P.px = P.x; P.py = P.y; P.pz = P.z; }
+    }
     P.yaw = wsNum(p.yaw, P.yaw); P.pitch = wsNum(p.pitch, P.pitch);
     P.hotbar = Math.max(0, Math.min(8, wsNum(p.hot, 0)|0));
     const put = (slot, a) => {
