@@ -89,6 +89,7 @@
 #sv-air{display:none;flex-direction:row-reverse;height:16px;margin:0 2px 2px;}
 .sv-b{width:14px;height:14px;margin-left:5px;border-radius:50%;box-sizing:border-box;border:2px solid transparent;}
 .sv-b.on{border-color:#cfeaff;background:rgba(120,190,255,.45);box-shadow:inset 2px 2px 0 rgba(255,255,255,.6);}
+#fluid-ov{position:fixed;inset:0;pointer-events:none;display:none;z-index:90;background-size:256px 256px;image-rendering:pixelated;}   /* voile sous l'eau / dans la lave */
 #sv-hurt,#sv-burn{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:150;}
 #sv-hurt{background:radial-gradient(ellipse at center,rgba(200,0,0,0) 35%,rgba(200,0,0,.85) 100%);}
 #sv-burn{background:linear-gradient(to top,rgba(255,120,0,.75),rgba(255,120,0,0) 55%);transition:opacity .2s;}
