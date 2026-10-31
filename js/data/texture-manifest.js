@@ -32,6 +32,7 @@ const TEX_DATA = {
   "coal_ore": "assets/textures/blocks/coal_ore.png",
   "gold_ore": "assets/textures/blocks/gold_ore.png",
   "diamond_ore": "assets/textures/blocks/diamond_ore.png",
+  "obsidian": "assets/textures/blocks/obsidian.png",   // texture générée (aucune obsidienne fournie dans les assets) : à remplacer par la vraie
   "iron_block": "assets/textures/blocks/iron_block.png",
   "gold_block": "assets/textures/blocks/gold_block.png",
   "diamond_block": "assets/textures/blocks/diamond_block.png",
@@ -45,7 +46,6 @@ const TEX_DATA = {
   "tnt_side": "assets/textures/blocks/tnt_side.png",
   "wool": "assets/textures/blocks/wool.png",
   "torch_block": "assets/textures/blocks/torch_block.png",
-  "water": "assets/textures/blocks/water.png",
   "cactus_side": "assets/textures/blocks/cactus_side.png",
   "chest_front": "assets/textures/blocks/chest_front.png",
   "chest_side": "assets/textures/blocks/chest_side.png",
@@ -135,6 +135,16 @@ const TEX_DATA = {
   "yellow_terracotta": "assets/textures/blocks/Yellow_Terracotta_29_JE1_BE1.webp",
 };
 
+// Fluides : feuilles d'animation (images empilées verticalement). still = 16×16 par image, flow = 32×32 par image (le courant est échantillonné
+// sur une fenêtre de 16×16 tournée selon la direction du flux, cf. render/chunk-mesher.js). water_overlay = voile affiché quand la caméra est dans l'eau.
+const FLUID_TEX_DATA = {
+  "water_still":   "assets/textures/fluids/water_still.png",
+  "water_flow":    "assets/textures/fluids/water_flow.png",
+  "lava_still":    "assets/textures/fluids/lava_still.png",
+  "lava_flow":     "assets/textures/fluids/lava_flow.png",
+  "water_overlay": "assets/textures/fluids/water_overlay.png",
+};
+
 const SKY_TEX_DATA = {sun: "assets/textures/environment/sun.png", moon: "assets/textures/environment/moon.png"};
 const ITEM_TEX_DATA = {
   "wooden_pickaxe": "assets/textures/items/wooden_pickaxe.png",
@@ -193,6 +203,7 @@ const ITEM_TEX_DATA = {
   "shears": "assets/textures/items/shears.png",
   "bucket": "assets/textures/items/bucket.png",
   "water_bucket": "assets/textures/items/water_bucket.png",
+  "lava_bucket": "assets/textures/items/lava_bucket.png",
   "sugar_cane": "assets/textures/items/sugar_cane.png",
   "wheat": "assets/textures/items/wheat.png",
   "clock": "assets/textures/items/clock.png",
