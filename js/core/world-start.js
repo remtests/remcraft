@@ -106,7 +106,7 @@ function spawnGroundOk(x, y, z){
   const g = getB(x,y,z), gb = BLOCKS[g];
   if(!spawnSolid(g) || (gb && (gb.leaves || gb.log)) || g===22) return false;
   const a = getB(x,y+1,z), b = getB(x,y+2,z);
-  return !spawnSolid(a) && !spawnSolid(b) && a!==23 && b!==23;
+  return !spawnSolid(a) && !spawnSolid(b) && !FLUIDK[a] && !FLUIDK[b];
 }
 // Cherche, en spirale autour de (x,z) sur maxR blocs, la colonne libre la plus proche ; renvoie {x,z,y} (y = bloc libre où poser les pieds) ou null
 function findSafeSpawn(x, z, maxR){
