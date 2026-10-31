@@ -27,11 +27,13 @@ function lIdx(lx,ly,lz){ return (lx*CSIZ+lz)*CHH+ly; }
 const KNOWN  = new Uint8Array(256);   // id connu
 const OPAQUE = new Uint8Array(256);   // bloc plein : cache les faces voisines et bloque la lumière
 const HMB    = new Uint8Array(256);   // bloque la lumière du ciel pour la heightmap (opaque ou feuilles)
-const BCLS   = new Uint8Array(256);   // classe de mesh : 0 solide, 1 cutout, 2 verre, 3 eau
+const BCLS   = new Uint8Array(256);   // classe de mesh : 0 solide, 1 cutout, 2 verre, 3 eau, 4 lave
 const PLANT  = new Uint8Array(256);   // modèles en croix (herbe haute, fleurs, stalactites)
 const DRIP   = new Uint8Array(256);   // stalactites / stalagmites (modèle en croix retourné s'il pend du plafond)
 const AXIS   = new Uint8Array(256);   // bûches horizontales : 1 = axe X, 2 = axe Z
 const HASFRONT = new Uint8Array(256); // blocs orientés avec une face avant (coffre, four)
+const FLUIDK = new Uint8Array(256);   // fluides : 0 = aucun, 1 = eau, 2 = lave (voir blocks/fluids.js)
+const EMIT   = new Uint8Array(256);   // niveau de lumière émis par le bloc (torche 14, lave 15) : alimente LIGHTSRC
 for(const id in BLOCKS){
   const bd = BLOCKS[id], t = bd.tTop;
   KNOWN[id] = 1;
@@ -40,11 +42,14 @@ for(const id in BLOCKS){
   DRIP[id] = (bd.cross && !bd.plant) ? 1 : 0;
   AXIS[id] = bd.axis==='x' ? 1 : bd.axis==='z' ? 2 : 0;
   HASFRONT[id] = bd.tFront ? 1 : 0;
-  const transp = (isLeaf||isGlass||t==='torch_block'||t==='water'||isCross);
+  FLUIDK[id] = bd.fluid==='water' ? 1 : bd.fluid==='lava' ? 2 : 0;
+  EMIT[id] = bd.emit || 0;
+  const transp = (isLeaf||isGlass||t==='torch_block'||t==='water'||isCross||FLUIDK[id]>0);
   OPAQUE[id] = transp ? 0 : 1;
   HMB[id]    = (OPAQUE[id] || isLeaf) ? 1 : 0;
-  BCLS[id]   = isGlass ? 2 : t==='water' ? 3 : (isLeaf||t==='torch_block'||isCross) ? 1 : 0;
+  BCLS[id]   = FLUIDK[id]===2 ? 4 : FLUIDK[id]===1 ? 3 : isGlass ? 2 : (isLeaf||t==='torch_block'||isCross) ? 1 : 0;
 }
+EMIT[20] = 14;   // torche
 OPAQUE[27] = 0; HMB[27] = 1;   // coffre : bloc non plein (14×14×14) → les voisins gardent leurs faces, mais il bloque toujours le ciel
 OPAQUE[22] = 0; HMB[22] = 1;   // cactus : bloc non plein (14×14×16) → les voisins gardent leurs faces, mais il bloque toujours le ciel
 OPAQUE[255] = 1;   // sentinelle de la région de meshing
@@ -115,8 +120,8 @@ function setB(wx,wy,wz,v,s){
   m.edited = true;                       // ce chunk ne sera plus jamais purgé de la mémoire
   if(old!==v){                           // un simple changement d'état (porte qui s'ouvre) ne touche ni lumière, ni heightmap, ni cactus
     const lk = wx+','+wy+','+wz;
-    if(old===20) LIGHTSRC.delete(lk);
-    if(v===20)   LIGHTSRC.set(lk,{x:wx,y:wy,z:wz,lvl:14});
+    if(EMIT[old]) LIGHTSRC.delete(lk);
+    if(EMIT[v])   LIGHTSRC.set(lk,{x:wx,y:wy,z:wz,lvl:EMIT[v]});   // torche (14), lave (15)
     _hmChanged = recomputeColumn(d,m,col);
     // cactus : si le bloc dessous disparaît (ou si on en pose un sur du vide), il devra se casser
     if(v===0 && wy+1<=Y_MAX && getB(wx,wy+1,wz)===22) CACT_Q.push([wx,wy+1,wz]);
