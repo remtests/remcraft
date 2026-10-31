@@ -19,6 +19,7 @@ const ATLAS_SZ = 512, ATLAS_CELL = 24, ATLAS_GUT = 4, ATLAS_PER_ROW = Math.floor
 let ATLAS_TEX = null;
 const TILE_IDX = {};
 const TILE_TOP = new Uint8Array(256), TILE_BOT = new Uint8Array(256), TILE_SIDE = new Uint8Array(256);
+const TILE_OVER = new Uint8Array(256);   // 2e couche des côtés (frange d'herbe teintée) ; 0 = aucune
 const TILE_SIDE_R = new Uint8Array(256);   // côté tourné de 90° (bûches horizontales)
 let TILE_U0 = [], TILE_V0 = [];
 const TILE_TINT = new Uint8Array(256);   // 1 = teinte herbe, 2 = teinte feuillage
@@ -42,7 +43,7 @@ function rotatedCanvas(src){
 }
 function buildAtlas(){
   const names = new Set(['stone','torch_block']);
-  for(const id in BLOCKS){ const b = BLOCKS[id]; names.add(b.tTop); names.add(b.tSide); names.add(b.tBot); if(b.tFront) names.add(b.tFront); if(b.tFrontOn) names.add(b.tFrontOn); if(b.tSideR) names.add(b.tSideR); }
+  for(const id in BLOCKS){ const b = BLOCKS[id]; names.add(b.tTop); names.add(b.tSide); names.add(b.tBot); if(b.tFront) names.add(b.tFront); if(b.tFrontOn) names.add(b.tFrontOn); if(b.tSideR) names.add(b.tSideR); if(b.tSideOverlay) names.add(b.tSideOverlay); }
   if(names.size > 255) console.error('Atlas : trop de tuiles (' + names.size + ' > 255)');
   const cv = document.createElement('canvas'); cv.width = cv.height = ATLAS_SZ;
   const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
@@ -69,6 +70,7 @@ function buildAtlas(){
     const b = BLOCKS[id];
     TILE_TOP[id] = TILE_IDX[b.tTop]; TILE_BOT[id] = TILE_IDX[b.tBot]; TILE_SIDE[id] = TILE_IDX[b.tSide];
     if(b.tSideR) TILE_SIDE_R[id] = TILE_IDX[b.tSideR];
+    if(b.tSideOverlay) TILE_OVER[id] = TILE_IDX[b.tSideOverlay]+1;   // +1 : 0 = aucune
   }
   TILE_TINT.fill(0);
   for(const k in TINT_KEYS) if(TILE_IDX[k]!==undefined) TILE_TINT[TILE_IDX[k]] = TINT_KEYS[k]==='g' ? 1 : 2;   // 1 = herbe, 2 = feuillage
