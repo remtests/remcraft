@@ -23,7 +23,9 @@ function toTile16(img){
   return cv;
 }
 
-function loadTextures(cb){
+function loadTextures(cb0){
+  let _done = false;
+  const cb = function(){ if(_done) return; _done = true; buildFluidTextures(); cb0(); };   // fluides construits une seule fois, avant initThree()
   // 1. Textures procédurales pour tous les items/outils
   buildProceduralTextures();
 
@@ -33,7 +35,8 @@ function loadTextures(cb){
   const itemKeys = Object.keys(ITEM_TEX_DATA);
   const armorKeys = Object.keys(ARMOR_TEX_DATA);
   const mobKeys = Object.keys(MOB_TEX_DATA);
-  let pending = keys.length + itemKeys.length + 2 + armorKeys.length + mobKeys.length;
+  const fluidKeys = Object.keys(FLUID_TEX_DATA);
+  let pending = keys.length + itemKeys.length + 2 + armorKeys.length + mobKeys.length + fluidKeys.length;
 
   function loadOneImg(key, src){
     const img = new Image();
@@ -83,6 +86,17 @@ function loadTextures(cb){
     };
     img.onerror = function(){ console.warn('Texture de créature manquante:', key); pending--; if(pending <= 0) cb(); };
     img.src = MOB_TEX_DATA[key];
+  });
+  fluidKeys.forEach(function(key){   // feuilles d'animation des fluides : taille d'origine conservée (image 1 = rangée 0)
+    const img = new Image();
+    img.onload = function(){
+      const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+      cv.getContext('2d').drawImage(img,0,0);
+      FLUID_SPR[key] = cv;
+      pending--; if(pending <= 0) cb();
+    };
+    img.onerror = function(){ console.warn('Texture de fluide manquante:', key); pending--; if(pending <= 0) cb(); };
+    img.src = FLUID_TEX_DATA[key];
   });
   Object.keys(SKY_TEX_DATA).forEach(function(key){
     const img = new Image();
