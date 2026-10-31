@@ -58,7 +58,7 @@ addEventListener('mousedown',e=>{
     lockPtr(); return;
   }
   if(document.pointerLockElement&&!uiOn&&WORLD.mode!=='spectator'){
-    if(e.button===0 && !punchFire()){
+    if(e.button===0 && !mobPlayerAttack() && !punchFire()){
       mldown=true;
       P.breakCool=0; doBreak(castRay());   // un nouveau clic agit tout de suite : pas d'attente de la prochaine frame ni du délai « maintien » du créatif
     }
