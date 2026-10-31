@@ -17,7 +17,7 @@ const SV = {
   hp:20, food:20, sat:5, exh:0,
   fall:0, air:15, burn:0,
   invul:0, lastDmg:0, foodTimer:0, tickAcc:0, burnT:0, drownT:0,
-  inWater:false, headWater:false,
+  inWater:false, headWater:false, inLava:false,
   flash:0, hurtFlash:0, drawT:0, shakeT:0, tiltT:99, tiltAmp:0,   // tilt de caméra à la blessure (voir svTiltRoll)
   eat:null, dead:false, cause:'', spawn:null, dirty:true, modeShown:null,
 };
@@ -26,7 +26,7 @@ const SV_MAX = 20, SV_AIR_MAX = 15, SV_EAT_TIME = 1.6;
 const FOOD_VALUES = { apple:{f:4, m:0.3}, bread:{f:5, m:0.6} };
 const SV_CAUSE = {
   fall:'fell from a high place', drown:'drowned', starve:'starved to death', cactus:'was pricked to death',
-  fire:'burned to death', kill:'died', void:'fell out of the world'
+  fire:'burned to death', kill:'died', void:'fell out of the world', lava:'tried to swim in lava'
 };
 const svSafe = () => WORLD.mode==='creative' || WORLD.mode==='spectator';   // modes sans vie ni faim
 const svOn = () => WORLD.mode==='survival' && !SV.dead;
@@ -124,10 +124,12 @@ function svRespawn(){
 
 // ── Eau (nage minimale, nécessaire pour la noyade) ──
 function svWaterCheck(){
-  const wx = Math.floor(P.x), wz = Math.floor(P.z), w = y => getB(wx, Math.floor(P.y+y), wz)===23;
-  SV.inWater = w(0.2) || w(0.9);
-  SV.headWater = w(P.eyeH);
-  return SV.inWater && !P.fly;
+  // Fluides : on est « dedans » seulement sous la surface (une lame d'eau de 1/8 de bloc ne fait pas nager) — voir blocks/fluids.js
+  const w = (y,K) => inFluidAt(P.x, P.y+y, P.z, K);
+  SV.inWater = w(0.2,1) || w(0.9,1);
+  SV.headWater = w(P.eyeH,1);
+  SV.inLava = w(0.1,2) || w(0.9,2);
+  return (SV.inWater || SV.inLava) && !P.fly;
 }
 
 // ── Appelés par la physique (60 pas/s) ──
@@ -224,8 +226,10 @@ function svUpdate(dt){
   if(SV.dead) return;
   svContact();
 
+  // lave : 4 PV tous les 0,5 s (invulnérabilité de svDamage) + enflammé 15 s ; l'eau éteint
+  if(SV.inLava){ svDamage(4,'lava',{armor:false}); SV.burn = Math.max(SV.burn, 15); }
   // feu : brûlure 1 PV / s, éteinte par l'eau
-  if(SV.inWater) SV.burn = 0;
+  if(SV.inWater && !SV.inLava) SV.burn = 0;
   if(SV.burn>0){
     SV.burn -= dt; SV.burnT += dt;
     if(SV.burnT>=1){ SV.burnT -= 1; svDamage(1,'fire',{force:true}); }
