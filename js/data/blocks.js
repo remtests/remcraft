@@ -43,6 +43,8 @@ Object.assign(BLOCKS[29], {log:true, axis:'z', tSideR:'log_side_r'});          /
 BLOCKS[6].leaves = true;                                                       // feuilles de chêne (cutout + teinte de biome)
 BLOCKS[14].glass = true;                                                       // verre (mesh translucide)
 // Four : côté dédié + face avant orientée (éteinte / allumée). Dessus = furnace_top, dessous = stone (inchangés).
+// Herbe : la frange verte des côtés est une 2e couche (grass_side_overlay, grise) teintée par biome comme le dessus → mêmes couleurs
+BLOCKS[1].tSideOverlay = 'grass_side_overlay';
 Object.assign(BLOCKS[21], {tSide:'furnace_side', tFront:'furnace_front', tFrontOn:'furnace_front_on'});
 
 // ════════════════════════════════════════════════
