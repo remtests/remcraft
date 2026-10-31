@@ -231,3 +231,13 @@ function bsNorm(id, s){ return (HASSTATE[id] && s) ? BS.clean(id, s) : 0; }
   });
   BS.define('ladder', {facing:H4});
 }
+
+
+// ════════════════════════════════════════════════
+// FLUIDES (eau, lave) — voir blocks/fluids.js
+// ════════════════════════════════════════════════
+// level   : niveau N du fluide, de 7 (SOURCE, valeur par défaut → état 0) à 0 (dernier bloc avant disparition) ; la hauteur visuelle vaut (N+1)/8
+// falling : fluide qui tombe (bloc situé sous un autre bloc de fluide, ou sous une source) : visuellement plein mais jamais une source
+// Un fluide est une SOURCE quand son état vaut exactement 0.
+BS.define('water', {level:[7,6,5,4,3,2,1,0], falling:'bool'});
+BS.define('lava',  {level:[7,6,5,4,3,2,1,0], falling:'bool'});
