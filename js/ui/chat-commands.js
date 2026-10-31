@@ -2,7 +2,7 @@
 
 // ════════════════════════════════════════════════
 // CHAT & COMMANDES : T / Entrée ouvre le chat, « / » ouvre directement une commande
-// /give /tp (coordonnées ou joueur) /time /fill (+ /help). Tab complète, ↑/↓ rappelle l'historique.
+// /give /tp (coordonnées ou joueur) /time /fill /summon (+ /help). Tab complète, ↑/↓ rappelle l'historique.
 // ════════════════════════════════════════════════
 let chatOpen = false;
 const chatEl = document.getElementById('chat'), chatLog = document.getElementById('chat-log'), chatIn = document.getElementById('chat-input'), hintEl = document.getElementById('chat-hint');
@@ -10,7 +10,8 @@ const chatHist = []; let chatHistI = 0;
 const CMD_INFO = {
   give:'Gives an item or block', tp:'Teleports you', time:'Sets, adds or reads the time of day',
   fill:'Fills a region with a block', gamemode:'Changes a game mode (survival, creative, spectator)', locate:'Finds the nearest biome',
-  kill:'Kills you', heal:'Restores your health and hunger', help:'Lists the commands',
+  kill:'Kills you, or all mobs with @e', heal:'Restores your health and hunger', help:'Lists the commands',
+  summon:'Summons a mob',
   blockstate:'Shows or changes the state of the block you are looking at'
 };
 const CMDS = Object.keys(CMD_INFO);
@@ -146,7 +147,12 @@ const CMD_SPEC = {
       cands: sc ? sc.props.flatMap(p => p.values.map(v => p.name+'='+v)) : [],
       desc: sc ? 'Properties to change on the targeted block (no spaces)' : 'Look at a block that has states'};
   },
-  kill(){ return {tokens:[], cur:-1, cands:[], desc:'Kills you (your items drop)'}; },
+  kill(a,i){ return {tokens:['[@e]'], cur: i<1 ? i : -1, cands: i===0 ? ['@e'] : [], desc: i===0 ? '@e = every mob (or @e[type=cow]); without argument: kills you (your items drop)' : ''}; },
+  summon(a,i){
+    const D = ['Mob to summon','X coordinate (~ = relative to you)','Y coordinate (~ = relative to you)','Z coordinate (~ = relative to you)'];
+    return {tokens:['<mob>','[x]','[y]','[z]'], cur: i<4 ? i : -1, cands: i===0 ? Object.keys(MOB_TYPES) : (i<4 ? _coordC(i-1) : []),
+      desc: i===0 ? 'Mob to summon, at the block you look at (or at your feet)' : (D[i]||'')};
+  },
   heal(){ return {tokens:[], cur:-1, cands:[], desc:'Restores health and hunger'}; },
   help(){ return {tokens:[], cur:-1, cands:[], desc:'Lists the commands'}; }
 };
@@ -232,7 +238,11 @@ function runCommand(line){
     else if(cmd==='blockstate') cmdBlockState(a);
     else if(cmd==='gamemode' || cmd==='gm') cmdGamemode(a);
     else if(cmd==='locate') cmdLocate(a);
-    else if(cmd==='kill'){ if(SV.dead) return chatErr('You are already dead.'); svDamage(1e9,'kill',{force:true}); }
+    else if(cmd==='summon') cmdSummon(a);
+    else if(cmd==='kill'){
+      if(a.length) return cmdKillMobs(a.join(''));
+      if(SV.dead) return chatErr('You are already dead.'); svDamage(1e9,'kill',{force:true});
+    }
     else if(cmd==='heal'){ SV.hp = SV_MAX; SV.food = 20; SV.sat = 5; SV.exh = 0; SV.burn = 0; SV.dirty = true; chatOk('Health and hunger restored'); }
     else if(cmd==='help' || cmd==='?') cmdHelp();
     else chatErr('Unknown command: /'+cmd+' (try /help)');
@@ -323,7 +333,8 @@ function cmdHelp(){
     '/tp <x> <y> <z> [yaw] [pitch]  — teleport (~ = relative, e.g. /tp ~ ~10 ~); /tp <x> <z> = to the surface',
     '/time set <day|noon|night|midnight|sunrise|sunset|ticks> · /time add <ticks> · /time query <daytime|day>',
     '/gamemode <survival|creative|spectator> [player]  — changes your game mode (or another player\'s, host only)',
-    '/kill  — kills you · /heal  — restores health and hunger',
+    '/summon <mob> [x y z]  — summons a mob (cow, zombie) at the block you look at, or at the given position (Tab: list of mobs)',
+    '/kill  — kills you · /kill @e  — removes every mob (/kill @e[type=cow] : one kind) · /heal  — restores health and hunger',
     '/locate biome <biome>  — finds the nearest biome (Tab: list of biomes)',
     '/fill <x1 y1 z1> <x2 y2 z2> <block> [replace [filter]|destroy|keep|hollow|outline]  (max 32768 blocks)',
     '/blockstate [prop=value,…]  — shows (or changes) the state of the block you look at · blocks with states: block[prop=value,…] in /fill'
@@ -344,6 +355,37 @@ function cmdBlockState(a){
   if(!setB(t.bx,t.by,t.bz,t.bid,r.state)) return chatErr('Nothing changed');
   markDirty(t.bx,t.by,t.bz,false);
   chatOk(name+' → '+BS.format(t.bid, r.state));
+}
+
+// /summon <mob> [x y z] : sans coordonnées, la créature apparaît sur la face du bloc visé (sinon aux pieds du joueur)
+function cmdSummon(a){
+  if(!a.length) return chatErr('Usage: /summon <mob> [x y z]');
+  const id = _norm(a[0]);
+  if(!MOB_TYPES[id]) return chatErr('Unknown mob: '+a[0]+' (Tab shows the list)');
+  let x, y, z;
+  if(a.length===1){
+    const t = castRay(32);
+    if(t){ x = t.pbx+0.5; y = t.pby; z = t.pbz+0.5; } else { x = P.x; y = P.y; z = P.z; }
+  } else if(a.length===4){
+    x = _coord(a[1], P.x, true); y = _coord(a[2], P.y, false); z = _coord(a[3], P.z, true);
+    if(isNaN(x)||isNaN(y)||isNaN(z)) return chatErr('Invalid coordinates');
+    if(Math.abs(x)>3e7 || Math.abs(z)>3e7) return chatErr('Coordinates too far away');
+    if(y<=Y_MIN || y>=Y_MAX-1) return chatErr('Height out of the world ('+Y_MIN+' to '+(Y_MAX-2)+')');
+  } else return chatErr('Usage: /summon <mob> [x y z]');
+  if(MOBS.length>=MOB_MAX) return chatErr('Too many mobs ('+MOB_MAX+' max). Use /kill @e to remove them.');
+  if(!spawnMob(id, x, y, z)) return chatErr('Could not summon '+MOB_TYPES[id].name+' (texture missing?)');
+  chatOk('Summoned '+MOB_TYPES[id].name);
+  if(MP.open) addChat('Mobs only exist in your own game: they are not synchronised in multiplayer.', '#ffff55');
+}
+// /kill @e[type=cow] : retire les créatures (toutes, ou d'un seul type)
+function cmdKillMobs(arg){
+  const m = /^@e(?:\[type=([a-z0-9_:]+)\])?$/i.exec(arg);
+  if(!m) return chatErr('Usage: /kill   or   /kill @e[type=<mob>]');
+  let type = null;
+  if(m[1]){ type = _norm(m[1]); if(!MOB_TYPES[type]) return chatErr('Unknown mob: '+m[1]); }
+  const n = mobKillAll(type);
+  if(!n) return chatErr('No mob found');
+  chatOk('Killed '+n+' mob'+(n>1?'s':''));
 }
 
 function cmdGive(a){
