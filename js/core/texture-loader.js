@@ -32,7 +32,8 @@ function loadTextures(cb){
   const keys = Object.keys(TEX_DATA);
   const itemKeys = Object.keys(ITEM_TEX_DATA);
   const armorKeys = Object.keys(ARMOR_TEX_DATA);
-  let pending = keys.length + itemKeys.length + 2 + armorKeys.length;
+  const mobKeys = Object.keys(MOB_TEX_DATA);
+  let pending = keys.length + itemKeys.length + 2 + armorKeys.length + mobKeys.length;
 
   function loadOneImg(key, src){
     const img = new Image();
@@ -71,6 +72,17 @@ function loadTextures(cb){
     };
     img.onerror = function(){ console.warn('Texture d\'armure manquante:', key); pending--; if(pending <= 0) cb(); };
     img.src = ARMOR_TEX_DATA[key];
+  });
+  mobKeys.forEach(function(key){   // textures de créatures : taille d'origine conservée (les UV en dépendent)
+    const img = new Image();
+    img.onload = function(){
+      const cv = document.createElement('canvas'); cv.width = img.width; cv.height = img.height;
+      cv.getContext('2d').drawImage(img,0,0);
+      MOB_IMG[key] = cv;
+      pending--; if(pending <= 0) cb();
+    };
+    img.onerror = function(){ console.warn('Texture de créature manquante:', key); pending--; if(pending <= 0) cb(); };
+    img.src = MOB_TEX_DATA[key];
   });
   Object.keys(SKY_TEX_DATA).forEach(function(key){
     const img = new Image();
