@@ -52,7 +52,7 @@ function wsSave(){
   if(!WS.cur || !gameOn || MP.role==='client' || SV.dead) return false;
   const idx = wsReadIndex(), m = idx.find(w => w.id===WS.cur);
   if(!m) return false;   // monde supprimé entre-temps
-  const flat = [], withDir = [];
+  const flat = [], withDir = [];   // withDir : entrées à plus de 4 champs (orientation de coffre, état de bloc)
   for(const e of MP.edits.values()){ if(e.length>4) withDir.push(e); else flat.push(e[0], e[1], e[2], e[3]); }
   const chests = []; for(const [k,s] of CHESTS) if(s.some(x => x.id!==null)) chests.push([k, s.map(x => [x.id, x.n])]);
   const fu = []; for(const k of FURNACES.keys()) fu.push(mpFurnaceMsg(k, true));
@@ -104,7 +104,7 @@ async function wsApplyPending(prog){
   let t0 = performance.now();
   for(let i=0;i<list.length;i++){
     const [x,y,z,v] = list[i];
-    if(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(z) && Number.isInteger(v) && (v===0 || BLOCKS[v])) setB(x, y, z, v);
+    if(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(z) && Number.isInteger(v) && (v===0 || BLOCKS[v])) setB(x, y, z, v, list[i][5]);   // [5] = état du bloc (absent des anciennes sauvegardes → 0)
     if(performance.now()-t0 > 30){
       prog(5+Math.round(5*i/list.length), 'Loading saved changes… '+i+' / '+list.length);
       await nextFrame(); t0 = performance.now();
