@@ -40,6 +40,7 @@ const BLOCKS = {
 Object.assign(BLOCKS[5],  {log:true, logX:28, logZ:29, mat:'wood'});          // bûche de chêne : logX/logZ = variantes posées à l'horizontale
 Object.assign(BLOCKS[28], {log:true, axis:'x', tSideR:'log_side_r'});          // axe X : écorce tournée de 90° (tuile générée par l'atlas)
 Object.assign(BLOCKS[29], {log:true, axis:'z', tSideR:'log_side_r'});          // axe Z
+BLOCKS[23].fluid = 'water';                                                    // fluide : états level/falling (data/block-states.js), simulation dans blocks/fluids.js
 BLOCKS[6].leaves = true;                                                       // feuilles de chêne (cutout + teinte de biome)
 BLOCKS[14].glass = true;                                                       // verre (mesh translucide)
 // Four : côté dédié + face avant orientée (éteinte / allumée). Dessus = furnace_top, dessous = stone (inchangés).
@@ -135,6 +136,12 @@ _all('iron_block',    'Block of Iron',    'iron_block',    {hard:5, mat:'stone',
 _all('gold_block',    'Block of Gold',    'gold_block',    {hard:3, mat:'stone', needsPick:2});
 _all('diamond_block', 'Block of Diamond', 'diamond_block', {hard:5, mat:'stone', needsPick:2});
 
+// Obsidienne (eau + lave source) : se mine uniquement avec une pioche en diamant (needsTier = palier d'outil minimum pour obtenir le drop)
+_all('obsidian', 'Obsidian', 'obsidian', {hard:50, mat:'stone', needsPick:2, needsTier:5});
+// Lave : fluide opaque et lumineux (niveau de lumière 15). Les textures 'lava' / 'water' sont des tuiles de l'atlas (1re image du fluide, pour les icônes) ;
+// le rendu réel des fluides (animation, hauteur, courant) est fait par le mesher avec la texture dédiée FLUID_TEX.
+addBlock('lava', 'Lava', 'lava', 'lava', 'lava', {hard:100, drop:null, noCollide:true, isFluid:true, fluid:'lava', emit:15});
+
 // id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
 const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;
 BS.attachAll();   // rattache les schémas d'états (data/block-states.js) aux blocs qui existent maintenant
@@ -185,6 +192,7 @@ const ITEMS = {
   iron_door:     {name:'Iron Door'},
   bucket:        {name:'Bucket'},
   water_bucket:  {name:'Water Bucket'},
+  lava_bucket:   {name:'Lava Bucket'},
   leather_helmet:{name:'Leather Cap'},
   leather_chestplate:{name:'Leather Tunic'},
   leather_leggings:{name:'Leather Pants'},
