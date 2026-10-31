@@ -9,6 +9,11 @@ const CN = 5, CNY = 46, CCY = 45;
 const _c1 = new Float32Array(CN*CN*CNY), _c2 = new Float32Array(CN*CN*CNY), _cb = new Float32Array(CN*CN*CNY);
 const _maybe = new Uint8Array(16*CCY);
 const _hArr = new Int16Array(256), _tArr = new Uint8Array(256);
+const _oArr = new Uint8Array(256);   // influence océanique par colonne (0..255) : plages, pas d'arbres sur la grève
+const B_WATER = 23, B_LAVA = BID('lava');
+// Lacs de lave souterrains : le fond des cavernes profondes (ardoise) est inondé sous LAVA_DEEP_Y ; plus haut, des « lacs » isolés
+// (zones de bruit basse fréquence, niveau propre à chaque région de 48×48) remplissent le creux des grottes jusqu'à leur niveau.
+const LAVA_DEEP_Y = -46, LAVA_LAKE_LO = -44;
 const _hPad = new Int16Array(18*18);   // hauteurs avec 1 colonne de marge (pente calculée sans coupure aux bords de chunk)
 function tri(a,gx,gz,gy,fx,fz,fy){
   const i = (gx*CN+gz)*CNY+gy, sx = CN*CNY, sz = CNY;
@@ -172,6 +177,19 @@ function placeOres(data, cx, cz, SD, topH){
   }
 }
 
+// Niveau de lave (y monde) de la colonne, ou Y_MIN si aucune : nappe profonde partout, lacs plus haut dans des zones de bruit
+function lavaLevelAt(wx, wz){
+  let lv = LAVA_DEEP_Y;
+  const zone = perlin2(wx*0.012, wz*0.012, WORLD_SEED^2401);
+  if(zone > 0.30){   // zone de lacs
+    // 3 paliers (≈ −38 / −26 / −14) sur de très grandes plages : surface plane par lac, peu de « marches » visibles
+    const band = Math.min(2, Math.floor((perlin2(wx*0.0035+7.7, wz*0.0035-4.1, WORLD_SEED^2402)*0.5+0.5)*3));
+    const lake = LAVA_LAKE_LO + 6 + band*12;
+    if(lake > lv) lv = lake;
+  }
+  return lv;
+}
+
 function dirtDepthOf(type, h){ return (type===2 && h>38) || (type===9 && h>42) ? 1 : (type===10 ? 10 : (type===3 ? 7 : 4)); }   // désert : 2 sable + 5 grès ; badlands : 10 strates
 
 function generateChunk(cx,cz){
@@ -199,7 +217,7 @@ function generateChunk(cx,cz){
     _hPad[(lx+1)*18+lz+1] = _ch;
     if(lx<0||lx>=CSIZ||lz<0||lz>=CSIZ) continue;
     const col = lx*CSIZ+lz;
-    _hArr[col] = _ch; _tArr[col] = _ct; meta.bio[col] = _ct;
+    _hArr[col] = _ch; _tArr[col] = _ct; meta.bio[col] = _ct; _oArr[col] = Math.round(_co*255);
     const dd = dirtDepthOf(_ct, _ch);
     const st = _ch + Y_OFF - dd;
     if(st > maxStone) maxStone = st;
@@ -269,7 +287,9 @@ function generateChunk(cx,cz){
       const sl = Math.max(Math.abs(h-_hPad[hp-18]), Math.abs(h-_hPad[hp+18]), Math.abs(h-_hPad[hp-1]), Math.abs(h-_hPad[hp+1]));
       steep = sl >= (type===2 ? 3 : 4);
     }
-    const sub = (steep || (type===2 && h>38) || (type===9 && h>42)) ? 3 : (type===3 ? 4 : 2);
+    let sub = (steep || (type===2 && h>38) || (type===9 && h>42)) ? 3 : (type===3 ? 4 : 2);
+    const wet = h < SEA_LEVEL, sandy = wet || (_oArr[col] > 12 && h <= SEA_LEVEL+1);   // sous la mer, ou plage (grève d'un océan / d'une île)
+    const seaBed = h >= SEA_LEVEL-7 ? 4 : 9;                                           // sable en eau peu profonde, gravier au large
     // argile : lentilles dans la couche de terre des basses terres (affleure rarement)
     let clay = 0;
     if(h <= 16 && (type===0 || type===1 || type===4 || type===5 || type===7 || type===8)){
@@ -286,12 +306,14 @@ function generateChunk(cx,cz){
         v = badSand && k===1 ? B_RED_SAND : (badSand && k===2 ? B_RED_SANDSTONE : BAD_STRATA[((((ly-Y_OFF)+badOff)%20)+20)%20]);
       } else if(type === 3) v = (surfLy-ly) <= 2 ? 4 : B_SANDSTONE;   // désert : 2 blocs de sable puis du grès
       else if(clay && surfLy-ly <= 2) v = B_CLAY;
+      if(sandy && surfLy-ly <= 3) v = seaBed;
       data[base+ly] = v;
     }
     // ligne des neiges : monte quand il fait chaud, descend quand il fait froid (+ ondulation)
     const snowLine = (type===2 || type===9) ? 52 + (tempAt(wx,wz)-0.5)*40 + perlin2(wx*0.06, wz*0.06, SD^919)*3 : 999;
     let sb;
-    if(type === 3) sb = 4;                    // sable du désert
+    if(sandy) sb = seaBed;                    // fond marin / plage
+    else if(type === 3) sb = 4;               // sable du désert
     else if(type === 10) sb = badSand ? B_RED_SAND : BAD_STRATA[((((surfLy-Y_OFF)+badOff)%20)+20)%20];
     else if(type === 6 && tempAt(wx,wz) < 0.41) sb = B_SNOWY_GRASS;   // taïga enneigée
     else if(clay === 2) sb = B_CLAY;
@@ -303,6 +325,19 @@ function generateChunk(cx,cz){
     else if(h > 32) sb = 8;
     else            sb = 1;
     data[base+surfLy] = sb;
+    // océan : l'eau (sources) remplit la colonne de la surface du sol jusqu'au niveau de la mer
+    if(wet) for(let y=h+1; y<=SEA_LEVEL; y++) data[base+y+Y_OFF] = B_WATER;
+    // lave : cavités fermées (ly < stoneTop : jamais l'air libre) sous le niveau de lave de la colonne
+    const lavaTop = lavaLevelAt(wx, wz);
+    if(lavaTop > Y_MIN){
+      const top = Math.min(stoneTop-1, lavaTop+Y_OFF);
+      for(let ly=BED_LY+1; ly<=top; ly++){
+        if(data[base+ly] !== 0) continue;
+        data[base+ly] = B_LAVA;
+        // lumière : seules quelques cases de surface éclairent (meta.lsrc, lu par le mesher), pas toute la nappe
+        if(data[base+ly+1] === 0 && lx%3===0 && lz%3===0) (meta.lsrc || (meta.lsrc = [])).push(wx, ly-Y_OFF, wz);
+      }
+    }
   }
 
   // 3b) minerais en filons (répartition gaussienne en hauteur)
@@ -359,7 +394,8 @@ function generateChunk(cx,cz){
     if(lx>=0&&lx<CSIZ&&lz>=0&&lz<CSIZ){ h=_hArr[lx*CSIZ+lz]; type=_tArr[lx*CSIZ+lz]; }
     else { colInfo(wx,wz); h=_ch; type=_ct; }
     const prob = TREE_P[type];
-    if(ts >= prob || !(h>4 && h<50)) continue;
+    let co; if(lx>=0&&lx<CSIZ&&lz>=0&&lz<CSIZ) co = _oArr[lx*CSIZ+lz]/255; else co = _co;
+    if(ts >= prob || !(h>4 && h<50) || (co>0.05 && h<=SEA_LEVEL+2)) continue;
     if(type===9 && (h>44 || perlin2(wx*0.07, wz*0.07, SD^717) > 0.2)) continue;   // pas d'arbre sur la pierre / le gravier
     const sp = pickTree(type, hash2(wx,wz,99^SD)), T = TREE[sp], rh = hash2(wx+1,wz,88^SD);
     let trunkH = 4 + (rh*3|0);
@@ -410,7 +446,7 @@ function generateChunk(cx,cz){
       if((hv>>>0)/4294967296 > 0.85) continue;
       const tx = ci*CELL + 1 + ((hv>>>4)&255)%8, tz = cj*CELL + 1 + ((hv>>>12)&255)%8;
       colInfo(tx,tz);
-      if(_ct!==7 || !(_ch>4 && _ch<55)) continue;
+      if(_ct!==7 || !(_ch>4 && _ch<55) || (_co>0.05 && _ch<=SEA_LEVEL+2)) continue;
       const GT = TREE.jungle;                                        // arbre de jungle géant
       const th = _ch, T = 22 + ((hv>>>20)&15)%9;
       for(let a=0;a<2;a++) for(let b=0;b<2;b++){
@@ -446,7 +482,7 @@ function generateChunk(cx,cz){
       if((hv>>>0)/4294967296 > 0.78) continue;
       const tx = ci*CELL + ((hv>>>4)&255)%5, tz = cj*CELL + ((hv>>>12)&255)%5;   // tronc en [tx,tx+1]×[tz,tz+1] : ≥ 1 bloc d'écart avec la cellule voisine
       colInfo(tx,tz);
-      if(_ct!==4 || !(_ch>4 && _ch<55)) continue;
+      if(_ct!==4 || !(_ch>4 && _ch<55) || (_co>0.05 && _ch<=SEA_LEVEL+2)) continue;
       const th = _ch, T = 5 + ((hv>>>20)&255)%3;   // hauteur du tronc : 5, 6 ou 7
       for(let a=0;a<2;a++) for(let b=0;b<2;b++){
         const lx = tx+a-x0, lz = tz+b-z0;
