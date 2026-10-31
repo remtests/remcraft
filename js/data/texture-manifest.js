@@ -17,6 +17,7 @@ const TEX_DATA = {
 
   "grass_top": "assets/textures/blocks/grass_top.png",
   "grass_side": "assets/textures/blocks/grass_side.png",
+  "grass_side_overlay": "assets/textures/blocks/grass_block_side_overlay.png",
   "dirt": "assets/textures/blocks/dirt.png",
   "stone": "assets/textures/blocks/stone.png",
   "sand": "assets/textures/blocks/sand.png",
