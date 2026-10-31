@@ -167,7 +167,7 @@ function mpOnHello(m){
   for(const [k,d] of (m.cd||[])) CHEST_DIR.set(k, d);
   mpEl('mp-panel').style.display = 'none'; mpEl('overlay').style.display = 'none';
   handlePlayBtn().then(()=>{
-    for(const e of (m.edits||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4]);
+    for(const e of (m.edits||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4], e[5]);
     for(const [k,s] of (m.chests||[])) mpSetChest(k, s);
     for(const f of (m.furnaces||[])) mpSetFurnace(f);
     mpApplyFires(m.fire||[]);
@@ -182,7 +182,7 @@ function mpRecvGame(m){
   switch(m.t){
     case 'p': { const pl = mpPlayer(m.f); pl.rp = m; if(m.ar) pl.ar = m.ar; break; }
     case 'c': addChat('<'+mpPlayer(m.f).name+'> '+String(m.m).slice(0,256)); break;
-    case 'b': if(gameOn) for(const e of (m.e||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4]); break;
+    case 'b': if(gameOn) for(const e of (m.e||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4], e[5]); break;
     case 'dr': if(gameOn && !drops.some(d=>d.uid===m.u)) spawnDrop(m.x, m.y, m.z, m.i, m.n, {remote:true, uid:m.u, vx:m.vx, vy:m.vy, vz:m.vz, age:m.a||0}); break;
     case 'dk': { const i = drops.findIndex(d=>d.uid===m.u); if(i>=0) removeDrop(i); break; }
     case 'du': { const d = drops.find(d=>d.uid===m.u); if(d) d.n = m.n|0; break; }
@@ -195,19 +195,23 @@ function mpRecvGame(m){
 }
 
 // ── Blocs ──
-function mpSendEdit(x,y,z,v){
-  const k = x+','+y+','+z, e = (BLOCKS[v]?.tFront && CHEST_DIR.has(k)) ? [x,y,z,v,CHEST_DIR.get(k)] : [x,y,z,v];
+// Une modification = [x,y,z,v] · [x,y,z,v,dir] (coffre/four orienté) · [x,y,z,v,dir|null,état] (bloc à états ; dir = null s'il n'y en a pas)
+function mpEditTuple(x,y,z,v,d,s){ return s ? [x,y,z,v,(d===undefined?null:d),s] : d===undefined ? [x,y,z,v] : [x,y,z,v,d]; }
+function mpSendEdit(x,y,z,v,s){
+  const k = x+','+y+','+z, e = mpEditTuple(x,y,z,v, (BLOCKS[v]?.tFront && CHEST_DIR.has(k)) ? CHEST_DIR.get(k) : undefined, s);
   MP.edits.set(k, e);          // journal complet : sert à synchroniser les joueurs qui arrivent plus tard
   if(MP.open) MP.eq.push(e);   // envoyé en lot dans mpTick
 }
-function mpApplyEdit(x,y,z,v,d){
+function mpApplyEdit(x,y,z,v,d,s){
   const k = x+','+y+','+z;
-  MP.edits.set(k, d===undefined ? [x,y,z,v] : [x,y,z,v,d]);
+  if(d===null) d = undefined;
+  s = bsNorm(v, s);   // état venu du réseau : toujours revalidé
+  MP.edits.set(k, mpEditTuple(x,y,z,v,d,s));
   if(BLOCKS[v]?.tFront && d!==undefined) CHEST_DIR.set(k, d);
   else if(v!==27 && getB(x,y,z)===27){ CHESTS.delete(k); CHEST_DIR.delete(k); }
   if(v!==21 && getB(x,y,z)===21){ FURNACES.delete(k); MP_FUR.sig.delete(k); if(FURNACE_CUR===k){ FURNACE_CUR = null; if(mpEl('furnace-ui').classList.contains('open')) closeUI(); } }   // four cassé par un autre joueur
   MP.applying = true;
-  try{ if(setB(x,y,z,v)) markDirty(x,y,z,true); }finally{ MP.applying = false; }
+  try{ if(setB(x,y,z,v,s)) markDirty(x,y,z,true); }finally{ MP.applying = false; }
 }
 
 // ── Coffres : on envoie le contenu dès qu'il change pendant que le coffre est ouvert (et à la fermeture) ──
