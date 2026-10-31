@@ -25,11 +25,11 @@ let _creativeList = null;
 function creativeList(){
   if(_creativeList) return _creativeList;
   const l = [];
-  for(const id in BLOCKS){ const i=+id; if(i===23 || BLOCKS[i].variantOf) continue; l.push(i===20 ? 'torch' : i); }
+  for(const id in BLOCKS){ const i=+id; if(BLOCKS[i].isFluid || BLOCKS[i].variantOf) continue; l.push(i===20 ? 'torch' : i); }
   for(const k in ITEMS) if(IMGS[k] && !l.includes(k)) l.push(k);
   return _creativeList = l;
 }
-const stackFor = id => (typeof id==='string' && /(_sword|_pickaxe|_axe|_shovel|_hoe|_helmet|_chestplate|_leggings|_boots)$|^(bow|shears|flint_and_steel|bucket|water_bucket|saddle)$/.test(id)) ? 1 : 64;
+const stackFor = id => (typeof id==='string' && /(_sword|_pickaxe|_axe|_shovel|_hoe|_helmet|_chestplate|_leggings|_boots)$|^(bow|shears|flint_and_steel|bucket|water_bucket|lava_bucket|saddle)$/.test(id)) ? 1 : 64;
 function drawCreativePalette(){
   const pal = document.getElementById('creative-pal'), creative = WORLD.mode==='creative';
   pal.style.display = creative ? 'block' : 'none';
