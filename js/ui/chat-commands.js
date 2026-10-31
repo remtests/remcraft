@@ -10,7 +10,8 @@ const chatHist = []; let chatHistI = 0;
 const CMD_INFO = {
   give:'Gives an item or block', tp:'Teleports you', time:'Sets, adds or reads the time of day',
   fill:'Fills a region with a block', gamemode:'Changes a game mode (survival, creative, spectator)', locate:'Finds the nearest biome',
-  kill:'Kills you', heal:'Restores your health and hunger', help:'Lists the commands'
+  kill:'Kills you', heal:'Restores your health and hunger', help:'Lists the commands',
+  blockstate:'Shows or changes the state of the block you are looking at'
 };
 const CMDS = Object.keys(CMD_INFO);
 const CMD_ALIAS = {teleport:'tp', gm:'gamemode', '?':'help'};
@@ -89,6 +90,18 @@ function resolveBlock(str){   // pour /fill : id numérique de bloc (air = 0)
   return typeof v==='number' ? v : null;
 }
 
+// Bloc avec états : « oak_door[facing=east,open=true] » (sans espaces) → {id, state} ou {error}
+function resolveBlockSpec(str){
+  const m = /^([^\[]+)(?:\[(.*)\])?$/.exec(String(str).trim());
+  if(!m) return {error:'Invalid block: '+str};
+  const id = resolveBlock(m[1]);
+  if(id===null) return {error:'Unknown block: '+m[1]};
+  if(m[2]===undefined || m[2]==='') return {id, state:0};
+  if(!HASSTATE[id]) return {error:'This block has no states: '+m[1]};
+  const r = BS.parse(id, m[2]);
+  return r.error ? {error:r.error} : {id, state:r.state};
+}
+
 // ── Aide à la saisie : suggestions + syntaxe de la commande affichées au-dessus du champ de chat ──
 let _itemKeys = null, _blockKeys = null;
 const itemKeys  = () => _itemKeys  || (_itemKeys  = [...itemTable().keys()].filter(k=>!/^\d/.test(k)).sort());
@@ -127,6 +140,12 @@ const CMD_SPEC = {
     cands: i===0 ? ['survival','creative','spectator'] : i===1 ? [...MP.players.values()].map(p=>p.name) : [],
     desc: i===0 ? 'The new game mode (spectator = free flight through blocks)' : i===1 ? 'Player to change (default: you; multiplayer host only)' : ''}; },
   locate(a,i){ return {tokens:['biome','<biome>'], cur: i<2 ? i : -1, cands: i===0 ? ['biome'] : i===1 ? BIOME_IDS : [], desc: i===0 ? 'What to look for' : i===1 ? 'Finds the nearest biome and tells you where it is' : ''}; },
+  blockstate(a,i){
+    const t = (typeof castRay==='function') ? castRay(8) : null, sc = t && BS.schema(t.bid);
+    return {tokens:['[prop=value,…]'], cur: i<1 ? i : -1,
+      cands: sc ? sc.props.flatMap(p => p.values.map(v => p.name+'='+v)) : [],
+      desc: sc ? 'Properties to change on the targeted block (no spaces)' : 'Look at a block that has states'};
+  },
   kill(){ return {tokens:[], cur:-1, cands:[], desc:'Kills you (your items drop)'}; },
   heal(){ return {tokens:[], cur:-1, cands:[], desc:'Restores health and hunger'}; },
   help(){ return {tokens:[], cur:-1, cands:[], desc:'Lists the commands'}; }
@@ -210,6 +229,7 @@ function runCommand(line){
     else if(cmd==='tp' || cmd==='teleport') cmdTp(a);
     else if(cmd==='time') cmdTime(a);
     else if(cmd==='fill') cmdFill(a);
+    else if(cmd==='blockstate') cmdBlockState(a);
     else if(cmd==='gamemode' || cmd==='gm') cmdGamemode(a);
     else if(cmd==='locate') cmdLocate(a);
     else if(cmd==='kill'){ if(SV.dead) return chatErr('You are already dead.'); svDamage(1e9,'kill',{force:true}); }
@@ -305,8 +325,25 @@ function cmdHelp(){
     '/gamemode <survival|creative|spectator> [player]  — changes your game mode (or another player\'s, host only)',
     '/kill  — kills you · /heal  — restores health and hunger',
     '/locate biome <biome>  — finds the nearest biome (Tab: list of biomes)',
-    '/fill <x1 y1 z1> <x2 y2 z2> <block> [replace [filter]|destroy|keep|hollow|outline]  (max 32768 blocks)'
+    '/fill <x1 y1 z1> <x2 y2 z2> <block> [replace [filter]|destroy|keep|hollow|outline]  (max 32768 blocks)',
+    '/blockstate [prop=value,…]  — shows (or changes) the state of the block you look at · blocks with states: block[prop=value,…] in /fill'
   ]) addChat(l, '#ffff55');
+}
+
+// /blockstate : sans argument, affiche l'état du bloc visé ; avec « prop=value,… », le modifie (les autres propriétés sont conservées)
+function cmdBlockState(a){
+  const t = castRay(8); if(!t) return chatErr('Look at a block first.');
+  const sc = BS.schema(t.bid), name = BLOCKS[t.bid].name+' at '+t.bx+' '+t.by+' '+t.bz;
+  if(!sc) return chatErr(name+' has no block states.');
+  const s0 = getS(t.bx,t.by,t.bz);
+  if(!a.length){
+    addChat(name+' : '+BS.format(t.bid, s0)+'  (state '+s0+')', '#ffff55');
+    return addChat('Properties: '+sc.props.map(p => p.name+' ['+p.values.join('|')+']').join(' · '), '#bbbbbb');
+  }
+  const r = BS.parse(t.bid, a.join(''), s0); if(r.error) return chatErr(r.error);
+  if(!setB(t.bx,t.by,t.bz,t.bid,r.state)) return chatErr('Nothing changed');
+  markDirty(t.bx,t.by,t.bz,false);
+  chatOk(name+' → '+BS.format(t.bid, r.state));
 }
 
 function cmdGive(a){
@@ -403,7 +440,8 @@ function cmdFill(a){
     if(isNaN(v)) return chatErr('Invalid coordinate: '+a[i]);
     c.push(Math.floor(v));
   }
-  const id = resolveBlock(a[6]); if(id===null) return chatErr('Unknown block: '+a[6]);
+  const spec = resolveBlockSpec(a[6]); if(spec.error) return chatErr(spec.error);
+  const id = spec.id;
   const mode = (a[7]||'replace').toLowerCase();
   if(!['replace','destroy','keep','hollow','outline'].includes(mode)) return chatErr('Unknown mode: '+a[7]);
   let filter;
@@ -421,8 +459,8 @@ function cmdFill(a){
     let target = id;
     if(mode==='hollow' && !edge) target = 0;
     else if(mode==='outline' && !edge) continue;
-    const cur = getB(x,y,z);
-    if(cur===target) continue;
+    const cur = getB(x,y,z), tstate = target===id ? spec.state : 0;
+    if(cur===target && getS(x,y,z)===bsNorm(target, tstate)) continue;
     if(mode==='keep' && cur!==0) continue;
     if(mode==='replace' && filter!==undefined && cur!==filter) continue;
     if(cur===27){   // un coffre remplacé : son contenu tombe au sol (destroy) ou est perdu
@@ -430,7 +468,7 @@ function cmdFill(a){
       if(sl && mode==='destroy') for(const it of sl) if(it.id!==null && it.n>0) spawnDrop(x+0.5,y+0.5,z+0.5,it.id,it.n);
       CHESTS.delete(k); CHEST_DIR.delete(k);
     }
-    if(setB(x,y,z,target)) n++;
+    if(setB(x,y,z,target,tstate)) n++;
   }
   if(!n) return chatErr('No blocks were changed');
   // rechargement des meshes touchés (+ anneau voisin pour la lumière)
