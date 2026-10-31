@@ -155,6 +155,9 @@ function fluidQuad(b, pts, uvs, cr, cg, cb, sk, bl, nx, ny, nz, wy){
 // bid : bloc de fluide à l'indice de région ri, en (wx,wy,wz) ; bk : seaux de géométrie du chunk
 function meshFluid(bid, ri, wx, wy, wz, bk){
   const k = FLUIDK[bid], lava = k === 2, b = bk[lava ? 4 : 3], cells = FT_CELL[k], tint = lava ? [255,255,255] : WATER_TINT;
+  // cellule noyée dans sa masse de fluide (océan, lac) : aucune face visible → on évite le calcul des coins
+  { const hid = n => FLUIDK[n] === k || OPAQUE[n];
+    if(hid(R[ri+1]) && hid(R[ri-1]) && hid(R[ri+RSX]) && hid(R[ri-RSX]) && hid(R[ri+RSZ]) && hid(R[ri-RSZ])) return; }
   const H = [[fluidCorner(ri,0,0,k), fluidCorner(ri,0,1,k)], [fluidCorner(ri,1,0,k), fluidCorner(ri,1,1,k)]];   // H[x][z]
   const lit = (idx) => lava ? [255,255] : [LT8[Math.round(LS[idx]*4)], LT8[Math.round(LB[idx]*4)]];
   const col = sh => [Math.round(tint[0]*sh), Math.round(tint[1]*sh), Math.round(tint[2]*sh)];
