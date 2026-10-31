@@ -205,6 +205,12 @@ const ITEM_TEX_DATA = {
 };
 
 
+// Textures de créatures (64×32 ou 64×64, gardées telles quelles). Pour ajouter une créature : sa texture ici + une entrée dans MOB_TYPES (entities/mobs.js).
+const MOB_TEX_DATA = {
+  "cow": "assets/textures/mobs/cow.png",
+  "zombie": "assets/textures/mobs/zombie.png"
+};
+
 const ARMOR_TEX_DATA = {
   "iron_layer_1": "assets/textures/armor/iron_layer_1.png",
   "iron_layer_2": "assets/textures/armor/iron_layer_2.png",
