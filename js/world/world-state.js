@@ -84,23 +84,59 @@ const MP = {peer:null, role:null, pid:null, code:null, hostConn:null, conns:new 
             name:mpLoadName()};
 const CACT_Q = [];   // cactus à vérifier (support) : alimentée par setB, traitée par updateCactus
 let _hmChanged = false;
-function setB(wx,wy,wz,v){
+
+// Observateurs de modifications (redstone, portes… : « un voisin a changé »). Appelés par setB APRÈS l'écriture, avec
+// (x, y, z, ancienId, ancienÉtat, nouvelId, nouvelÉtat). Vide par défaut : aucun coût tant que personne ne s'abonne.
+const BLOCK_LISTENERS = [];
+
+// ── Block states : un Uint16Array par chunk, alloué à la demande (meta.st) — même indexation que CHUNK_DATA.
+//    Un chunk qui n'a jamais reçu d'état non nul ne coûte rien. Voir data/block-states.js pour les schémas. ──
+function getS(wx,wy,wz){
+  wy = Math.floor(wy);
+  if(wy<Y_MIN||wy>Y_MAX) return 0;
+  wx = Math.floor(wx); wz = Math.floor(wz);
+  const m = CHUNK_META.get(ckey(wx>>4, wz>>4));
+  return (m && m.st) ? m.st[((wx&15)*CSIZ+(wz&15))*CHH + wy + Y_OFF] : 0;
+}
+
+// Écrit un bloc ET son état. `s` omis = état par défaut (0) : les appelants qui ne connaissent pas les états ne changent rien.
+// Renvoie true si l'id OU l'état a changé (la reconstruction du mesh reste à la charge de l'appelant : markDirty).
+function setB(wx,wy,wz,v,s){
   wx=Math.floor(wx); wy=Math.floor(wy); wz=Math.floor(wz);
   _hmChanged = false;
   if(wy<Y_MIN||wy>Y_MAX) return false;
+  s = bsNorm(v, s);                      // 0 si le bloc n'a pas d'états ; valeur invalide ramenée à un état valide
   const cx=wx>>4, cz=wz>>4, col=(wx&15)*CSIZ+(wz&15);
   const d = getChunkData(cx,cz), m = CHUNK_META.get(ckey(cx,cz));
-  const i = col*CHH + wy + Y_OFF, old = d[i];
-  if(old===v) return false;
+  const i = col*CHH + wy + Y_OFF, old = d[i], oldS = m.st ? m.st[i] : 0;
+  if(old===v && oldS===s) return false;
   d[i] = v;
+  if(s || m.st){ if(!m.st) m.st = new Uint16Array(CSIZ*CSIZ*CHH); m.st[i] = s; }
   m.edited = true;                       // ce chunk ne sera plus jamais purgé de la mémoire
-  const lk = wx+','+wy+','+wz;
-  if(old===20) LIGHTSRC.delete(lk);
-  if(v===20)   LIGHTSRC.set(lk,{x:wx,y:wy,z:wz,lvl:14});
-  _hmChanged = recomputeColumn(d,m,col);
-  // cactus : si le bloc dessous disparaît (ou si on en pose un sur du vide), il devra se casser
-  if(v===0 && wy+1<=Y_MAX && getB(wx,wy+1,wz)===22) CACT_Q.push([wx,wy+1,wz]);
-  else if(v===22 && wy>Y_MIN && getB(wx,wy-1,wz)===0) CACT_Q.push([wx,wy,wz]);
-  if(!MP.applying) mpSendEdit(wx,wy,wz,v);   // multijoueur : on journalise chaque modification (et on la diffuse si une partie est ouverte)
+  if(old!==v){                           // un simple changement d'état (porte qui s'ouvre) ne touche ni lumière, ni heightmap, ni cactus
+    const lk = wx+','+wy+','+wz;
+    if(old===20) LIGHTSRC.delete(lk);
+    if(v===20)   LIGHTSRC.set(lk,{x:wx,y:wy,z:wz,lvl:14});
+    _hmChanged = recomputeColumn(d,m,col);
+    // cactus : si le bloc dessous disparaît (ou si on en pose un sur du vide), il devra se casser
+    if(v===0 && wy+1<=Y_MAX && getB(wx,wy+1,wz)===22) CACT_Q.push([wx,wy+1,wz]);
+    else if(v===22 && wy>Y_MIN && getB(wx,wy-1,wz)===0) CACT_Q.push([wx,wy,wz]);
+  }
+  if(!MP.applying) mpSendEdit(wx,wy,wz,v,s);   // multijoueur : on journalise chaque modification (et on la diffuse si une partie est ouverte)
+  for(let k=0;k<BLOCK_LISTENERS.length;k++) BLOCK_LISTENERS[k](wx,wy,wz,old,oldS,v,s);
+  return true;
+}
+
+// Raccourcis états : lecture/écriture d'UNE propriété du bloc à cette position (ex. setProp(x,y,z,'open',true))
+function getProp(wx,wy,wz,name){ return BS.get(getB(wx,wy,wz), getS(wx,wy,wz), name); }
+function setProp(wx,wy,wz,name,value){
+  const id = getB(wx,wy,wz);
+  if(!HASSTATE[id]) return false;
+  return setB(wx,wy,wz,id,BS.set(id, getS(wx,wy,wz), name, value));
+}
+// setB + reconstruction du mesh (pose d'un bloc sans passer par le code de pose du joueur)
+function updateBlock(wx,wy,wz,v,s,light){
+  if(!setB(wx,wy,wz,v,s)) return false;
+  markDirty(Math.floor(wx),Math.floor(wy),Math.floor(wz),!!light);
   return true;
 }
