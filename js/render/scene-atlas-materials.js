@@ -103,7 +103,7 @@ function patchShader(shader){
       'reflectedLight.indirectDiffuse = bakedL;\n' +
       '#include <aomap_fragment>');
 }
-let CMATS = null;   // [solide, cutout, verre, eau]
+let CMATS = null;   // [solide, cutout, verre, eau, lave]
 function makeChunkMats(){
   // Matériau "basic" : aucun calcul de lumière dynamique, tout est précalculé dans les sommets (comme Minecraft)
   const mk = (opts) => {
@@ -111,11 +111,18 @@ function makeChunkMats(){
     m.onBeforeCompile = sh => patchShader(sh);
     return m;
   };
+  const mkF = (opts) => {
+    const m = new THREE.MeshBasicMaterial(Object.assign({map:FLUID_TEX, vertexColors:true}, opts));
+    m.onBeforeCompile = sh => patchShader(sh);
+    return m;
+  };
   return [
     mk({}),
     mk({side:THREE.DoubleSide, alphaTest:0.5}),
     mk({transparent:true, opacity:0.8, alphaTest:0.1, depthWrite:false}),
-    mk({transparent:true, opacity:0.72, side:THREE.DoubleSide, depthWrite:false}),
+    // Fluides : texture dédiée animée (FLUID_TEX, cf. render/fluid-render.js). L'eau garde l'alpha de sa texture (180/255) ; la lave est opaque
+    mkF({transparent:true, side:THREE.DoubleSide, depthWrite:false}),
+    mkF({}),
   ];
 }
 
