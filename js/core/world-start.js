@@ -170,6 +170,7 @@ async function handlePlayBtn(){
 
 function startGame(sx, sz, sbm, sy){
   fireReset();
+  mobsClear();
   gameOn=true; addChat(WORLD.cheats ? 'Press T to chat, / to type a command (/help).' : 'Press T to chat.', '#ffff55');
   P.x = sx+0.5; P.z = sz+0.5; P.y = (sy!==undefined) ? sy : sbm.h+3;
   P.px = P.x; P.py = P.y; P.pz = P.z;
