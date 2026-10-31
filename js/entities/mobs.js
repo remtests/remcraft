@@ -198,8 +198,10 @@ function mobLOS(m){   // ligne de vue entre les yeux de la créature et ceux du 
 function mobPhysics(m, dt){
   const hw = m.def.w/2, h = m.def.h, grounded = m.onGround;
   m.onGround = false;
-  const bw = getB(m.x, m.y+0.3, m.z), inW = !!(bw && BLOCKS[bw] && BLOCKS[bw].isFluid);
+  const bw = getB(m.x, m.y+0.3, m.z), fk = bw ? FLUIDK[bw] : 0, inW = fk > 0;   // eau ou lave : la créature flotte
   m.inWater = inW;
+  if(fk === 2 && m.deadT < 0){ m.lavaT = (m.lavaT||0) + dt; if(m.lavaT >= 0.5){ m.lavaT = 0; mobDamage(m, 4, null); } }   // lave : 4 PV / 0,5 s
+  if(fk === 1 && m.deadT < 0){ const fv = fluidFlowVec(Math.floor(m.x), Math.floor(m.y+0.3), Math.floor(m.z)); if(fv){ m.vx += fv[0]*0.6; m.vz += fv[1]*0.6; } }
   // vitesse horizontale : rejoint la vitesse voulue par l'IA (accélération vive au sol, molle en l'air) ; un recul s'estompe de la même façon
   const k = Math.min(1, dt*(grounded ? 10 : inW ? 4 : 1.5)), wf = inW ? 0.6 : 1;
   m.vx += (m.wx*wf - m.vx)*k; m.vz += (m.wz*wf - m.vz)*k;
