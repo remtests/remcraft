@@ -128,7 +128,9 @@ function doPlace(){
     if(!tp && fy===0){ if(fx!==0) placeId = BLOCKS[blockId].logX; else if(fz!==0) placeId = BLOCKS[blockId].logZ; }
   }
   removeFireAt(px,py,pz);
-  setB(px,py,pz,placeId); markDirty(px,py,pz,blockId===20);
+  // États de bloc (porte, levier, plaque…) : calculés d'après la face visée et le regard ; 0 pour tout bloc sans schéma (aucun changement)
+  const placeState = HASSTATE[placeId] ? BS.placement(placeId, {fx: tp?0:t.pbx-t.bx, fy: tp?1:t.pby-t.by, fz: tp?0:t.pbz-t.bz, yaw:P.yaw, pitch:P.pitch}) : 0;
+  setB(px,py,pz,placeId,placeState); markDirty(px,py,pz,blockId===20);
   if(WORLD.mode!=='creative'){ it.n--; if(it.n<=0){it.id=null;it.n=0;} }   // créatif : blocs infinis
   drawHotbar();
 }
