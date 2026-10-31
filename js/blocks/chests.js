@@ -81,7 +81,8 @@ function doBreak(t){
       setB(t.bx,t.by+1,t.bz,0); markDirty(t.bx,t.by+1,t.bz,false);
       const ad = BLOCKS[above].drop; if(ad!==null && ad!==undefined && !creative) spawnDrop(t.bx+0.5,t.by+1.5,t.bz+0.5,ad);
     }
-    const dropId = (bd.drop!==undefined) ? bd.drop : t.bid;
+    let dropId = (bd.drop!==undefined) ? bd.drop : t.bid;
+    if(bd.needsTier && getToolInfo().tier < bd.needsTier) dropId = null;   // obsidienne : pioche en diamant obligatoire
     if(dropId !== null && !creative) spawnDrop(t.bx+0.5, t.by+0.5, t.bz+0.5, dropId);   // créatif : pas d'objet au sol
     if(t.bid===6 && !creative) leafAppleDrop(t.bx, t.by, t.bz);   // feuillage : petite chance de pomme
     if(creative) P.breakCool = 0.22;
@@ -92,6 +93,7 @@ function doBreak(t){
 }
 
 function doPlace(){
+  { const hb = hotItem(); if(hb && hb.id!==null && isBucketItem(hb.id) && useBucket(hb)) return; }   // seau : ramasser / verser un fluide (blocks/fluids.js)
   const t=castRay(); if(!t) return;
   if(BLOCKS[t.bid]?.isCraft){toggleUI('craft');return;}
   if(BLOCKS[t.bid]?.isFurnace){openFurnace(t.bx,t.by,t.bz);return;}
@@ -110,11 +112,12 @@ function doPlace(){
   const tp=!!BLOCKS[t.bid]?.plant;   // viser une plante la remplace
   const px=tp?t.bx:t.pbx, py=tp?t.by:t.pby, pz=tp?t.bz:t.pbz;
   if(py<Y_MIN||py>Y_MAX) return;
-  if(getB(px,py,pz)!==0 && !tp) return;
+  if(getB(px,py,pz)!==0 && !tp && !FLUIDK[getB(px,py,pz)]) return;   // un fluide se remplace comme de l'air
   if(BLOCKS[blockId]?.plant){ const bb=getB(px,py-1,pz); if(bb!==1&&bb!==2) return; }
   // La torche ne peut être posée que sur un bloc solide en dessous
-  if(isTorchItem && !getB(px,py-1,pz)) return;
-  if(blockId===22 && !getB(px,py-1,pz)) return;   // un cactus a besoin d'un bloc dessous
+  const _sup = getB(px,py-1,pz), supOk = !!_sup && !FLUIDK[_sup];   // on ne pose rien « sur » l'eau ou la lave
+  if(isTorchItem && !supOk) return;
+  if(blockId===22 && !supOk) return;   // un cactus a besoin d'un bloc dessous
   if(!isTorchItem && !BLOCKS[blockId]?.noCollide && px<P.x+EXT && px+1>P.x-EXT && py<P.y+1.8 && py+1>P.y && pz<P.z+EXT && pz+1>P.z-EXT) return;  // FIX : vrai test AABB
   if(BLOCKS[blockId]?.tFront){   // coffre / four : la face avant regarde le joueur
     const k = px+','+py+','+pz, ddx = P.x-(px+0.5), ddz = P.z-(pz+0.5);
