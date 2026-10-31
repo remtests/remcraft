@@ -121,6 +121,34 @@ function biomeNode(i,j){
   return n;
 }
 let _ch = 0, _ct = 0;
+let _co = 0;   // influence océanique de la colonne (0 = terre, 1 = plein océan) : plage de sable, pas d'arbres sur la grève
+
+// ══════════════════════════════════════════════════════════
+// OCÉANS ET ÎLES DÉSERTES
+// ══════════════════════════════════════════════════════════
+// Un bruit de « continentalité » très basse fréquence creuse des bassins : le relief terrestre est fondu vers un fond marin (−6 … −28).
+// Dans les océans profonds, un second bruit (échelle ~70 blocs) fait émerger de petites îles (plage de sable, cœur herbeux, quelques arbres).
+// L'eau remplit chaque colonne dont le sol est sous SEA_LEVEL (voir chunk-generation.js).
+const SEA_LEVEL = 3;
+const OCEAN_THRESH = 0.47, OCEAN_SOFT = 0.08, ISLAND_THRESH = 0.625;
+function oceanAdjust(wx, wz){
+  const S0 = WORLD_SEED, sc = BIOME_SCALE;
+  const oc = octave2d(wx/(640*sc)+91.7, wz/(640*sc)-33.1, 3, S0^2301, 2.0, 0.55);
+  let t = clamp01((OCEAN_THRESH - oc)/OCEAN_SOFT);
+  t = t*t*(3-2*t);
+  _co = t;
+  if(t <= 0) return;
+  const deep = clamp01((OCEAN_THRESH - 0.09 - oc)/0.10);
+  let fl = -5 - 22*deep + perlin2(wx/31, wz/31, S0^2303)*2.2;                                  // fond marin
+  const isl = octave2d(wx/85, wz/85, 3, S0^2302, 2.1, 0.5);
+  const im = clamp01((isl - ISLAND_THRESH)/0.10) * clamp01((t - 0.35)/0.4);                    // masque d'île : seulement au large
+  if(im > 0){
+    const top = 6 + perlin2(wx/13, wz/13, S0^2304)*2.2 + octave2d(wx/40, wz/40, 2, S0^2305, 2.0, 0.5)*3;
+    fl += (top - fl) * Math.pow(im, 0.7);
+    if(fl >= SEA_LEVEL) _ct = 0;                                                               // île : biome tempéré (herbe, quelques arbres)
+  }
+  _ch = Math.round(_ch + (fl - _ch) * t);
+}
 
 // ══════════════════════════════════════════════════════════
 // RELIEF PAR COLONNE — croise plusieurs bruits, non lissés (donc vifs) :
@@ -173,7 +201,7 @@ function terrainRelief(wx, wz, hm){
   return h;
 }
 function colInfo(wx,wz){
-  if(WORLD.type==='flat'){ _ch = FLAT_H; _ct = 0; return; }
+  if(WORLD.type==='flat'){ _ch = FLAT_H; _ct = 0; _co = 0; return; }
   const fx = wx/NODE_G, fz = wz/NODE_G;
   const i = Math.floor(fx), j = Math.floor(fz);
   const tx = fx-i, tz = fz-j;
@@ -189,6 +217,7 @@ function colInfo(wx,wz){
   _ct = best;
   _ch = Math.round(terrainRelief(wx, wz, hm));
   if(best === 10) _ch = Math.round(_ch/3)*3;   // Badlands : relief en paliers de 3 blocs
+  _co = 0; oceanAdjust(wx, wz);                // océans et îles (après les paliers : le fond marin n'est pas en escalier)
 }
 function getBiomeData(wx, wz){
   colInfo(Math.floor(wx), Math.floor(wz));
