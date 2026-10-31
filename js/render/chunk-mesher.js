@@ -267,38 +267,43 @@ function buildChunkMesh(cx,cz){
             _sk[k] = s/n; _bl[k] = bl/n;
           } else { _sk[k] = LS[f0]; _bl[k] = LB[f0]; }
         }
-        if(b.n >= b.cap) bGrow(b);
-        const q = b.n++, p = q*12, u = q*8, c = q*12, l = q*8;
-        const tu = TILE_U0[tile], tv = TILE_V0[tile], sh = F.sh;
-        const tk = TILE_TINT[tile], to = col*3;
-        const tr = tk===1 ? TINTG[to]   : tk===2 ? TINTF[to]   : 1;
-        const tg = tk===1 ? TINTG[to+1] : tk===2 ? TINTF[to+1] : 1;
-        const tb = tk===1 ? TINTG[to+2] : tk===2 ? TINTF[to+2] : 1;
-        const ins = (IS_LEAF[bid] && IS_LEAF[nb]) ? LEAF_INSET : 0;   // face entre deux feuilles : légèrement rentrée dans son bloc → les deux faces coïncidentes ne sont plus dans le même plan (plus de Z-fighting)
-        for(let k=0;k<4;k++){
-          const v = F.v[k];
-          let qu = QUV[k*2], qv = QUV[k*2+1];
-          if(isCact){   // 1/16 de retrait de chaque côté ; les UV suivent (colonnes 1..15 sur les côtés, 1..15 × 1..15 sur le dessus)
-            b.pos[p+k*3] = wx+(v[0]?0.9375:0.0625); b.pos[p+k*3+1] = wy+v[1]; b.pos[p+k*3+2] = wz+(v[2]?0.9375:0.0625);
-            qu = qu?0.9375:0.0625; if(F.t!==2) qv = qv?0.9375:0.0625;
-          } else if(isChestB){   // coffre : boîte 14×14×14 px (retrait de 1/16 sur les côtés, hauteur 14/16) ; cas particulier : la tuile 16×16 ENTIÈRE est plaquée sur chaque face (UV 0..1, pas de recadrage)
-            b.pos[p+k*3] = wx+(v[0]?0.9375:0.0625); b.pos[p+k*3+1] = wy+v[1]*0.875; b.pos[p+k*3+2] = wz+(v[2]?0.9375:0.0625);
-          } else { b.pos[p+k*3] = wx+v[0]-F.n[0]*ins; b.pos[p+k*3+1] = wy+v[1]-F.n[1]*ins; b.pos[p+k*3+2] = wz+v[2]-F.n[2]*ins; }
-          b.uv[u+k*2]   = tu + qu*TILE_W;
-          b.uv[u+k*2+1] = tv + qv*TILE_W;
-          const cc = 255*sh*_ao[k];
-          b.col[c+k*3] = Math.round(cc*tr); b.col[c+k*3+1] = Math.round(cc*tg); b.col[c+k*3+2] = Math.round(cc*tb);
-          b.lit[l+k*2]   = LT8[Math.round(_sk[k]*4)];
-          b.lit[l+k*2+1] = LT8[Math.round(_bl[k]*4)];
-          b.nrm[q*12+k*3] = F.n[0]*127; b.nrm[q*12+k*3+1] = F.n[1]*127; b.nrm[q*12+k*3+2] = F.n[2]*127;
-        }
-        const bi = q*4, ix = q*6;
-        if(_ao[0]+_ao[2] >= _ao[1]+_ao[3]){   // diagonale choisie pour éviter les artefacts d'AO
-          b.idx[ix]=bi; b.idx[ix+1]=bi+1; b.idx[ix+2]=bi+2; b.idx[ix+3]=bi; b.idx[ix+4]=bi+2; b.idx[ix+5]=bi+3;
-        } else {
-          b.idx[ix]=bi+1; b.idx[ix+1]=bi+2; b.idx[ix+2]=bi+3; b.idx[ix+3]=bi+1; b.idx[ix+4]=bi+3; b.idx[ix+5]=bi;
+        const nPass = (F.t===2 && TILE_OVER[bid]) ? 2 : 1;   // côté d'un bloc d'herbe : base + frange teintée (2e quad, légèrement en avant, dans le mesh cutout)
+        for(let pass=0; pass<nPass; pass++){
+          const bq = pass ? bk[1] : b, tl = pass ? TILE_OVER[bid]-1 : tile;
+          if(bq.n >= bq.cap) bGrow(bq);
+          const q = bq.n++, p = q*12, u = q*8, c = q*12, l = q*8;
+          const tu = TILE_U0[tl], tv = TILE_V0[tl], sh = F.sh;
+          const tk = TILE_TINT[tl], to = col*3;
+          const tr = tk===1 ? TINTG[to]   : tk===2 ? TINTF[to]   : 1;
+          const tg = tk===1 ? TINTG[to+1] : tk===2 ? TINTF[to+1] : 1;
+          const tb = tk===1 ? TINTG[to+2] : tk===2 ? TINTF[to+2] : 1;
+          const ins = pass ? -0.002 : (IS_LEAF[bid] && IS_LEAF[nb]) ? LEAF_INSET : 0;   // face entre deux feuilles : légèrement rentrée dans son bloc → les deux faces coïncidentes ne sont plus dans le même plan (plus de Z-fighting)
+          for(let k=0;k<4;k++){
+            const v = F.v[k];
+            let qu = QUV[k*2], qv = QUV[k*2+1];
+            if(isCact){   // 1/16 de retrait de chaque côté ; les UV suivent (colonnes 1..15 sur les côtés, 1..15 × 1..15 sur le dessus)
+              bq.pos[p+k*3] = wx+(v[0]?0.9375:0.0625); bq.pos[p+k*3+1] = wy+v[1]; bq.pos[p+k*3+2] = wz+(v[2]?0.9375:0.0625);
+              qu = qu?0.9375:0.0625; if(F.t!==2) qv = qv?0.9375:0.0625;
+            } else if(isChestB){   // coffre : boîte 14×14×14 px (retrait de 1/16 sur les côtés, hauteur 14/16) ; cas particulier : la tuile 16×16 ENTIÈRE est plaquée sur chaque face (UV 0..1, pas de recadrage)
+              bq.pos[p+k*3] = wx+(v[0]?0.9375:0.0625); bq.pos[p+k*3+1] = wy+v[1]*0.875; bq.pos[p+k*3+2] = wz+(v[2]?0.9375:0.0625);
+            } else { bq.pos[p+k*3] = wx+v[0]-F.n[0]*ins; bq.pos[p+k*3+1] = wy+v[1]-F.n[1]*ins; bq.pos[p+k*3+2] = wz+v[2]-F.n[2]*ins; }
+            bq.uv[u+k*2]   = tu + qu*TILE_W;
+            bq.uv[u+k*2+1] = tv + qv*TILE_W;
+            const cc = 255*sh*_ao[k];
+            bq.col[c+k*3] = Math.round(cc*tr); bq.col[c+k*3+1] = Math.round(cc*tg); bq.col[c+k*3+2] = Math.round(cc*tb);
+            bq.lit[l+k*2]   = LT8[Math.round(_sk[k]*4)];
+            bq.lit[l+k*2+1] = LT8[Math.round(_bl[k]*4)];
+            bq.nrm[q*12+k*3] = F.n[0]*127; bq.nrm[q*12+k*3+1] = F.n[1]*127; bq.nrm[q*12+k*3+2] = F.n[2]*127;
+          }
+          const bi = q*4, ix = q*6;
+          if(_ao[0]+_ao[2] >= _ao[1]+_ao[3]){   // diagonale choisie pour éviter les artefacts d'AO
+            bq.idx[ix]=bi; bq.idx[ix+1]=bi+1; bq.idx[ix+2]=bi+2; bq.idx[ix+3]=bi; bq.idx[ix+4]=bi+2; bq.idx[ix+5]=bi+3;
+          } else {
+            bq.idx[ix]=bi+1; bq.idx[ix+1]=bi+2; bq.idx[ix+2]=bi+3; bq.idx[ix+3]=bi+1; bq.idx[ix+4]=bi+3; bq.idx[ix+5]=bi;
+          }
         }
         if(wy < b.minY) b.minY = wy; if(wy+1 > b.maxY) b.maxY = wy+1;
+        if(nPass>1){ const o = bk[1]; if(wy < o.minY) o.minY = wy; if(wy+1 > o.maxY) o.maxY = wy+1; }   // la frange vit dans un autre mesh : sa sphère englobante doit couvrir le bloc
       }
     }
   }
