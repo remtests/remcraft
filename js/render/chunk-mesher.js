@@ -7,6 +7,7 @@
 const RW = CSIZ*3+2, RNY = CHH+2, RSX = RNY, RSZ = RNY*RW;
 const R   = new Uint8Array(RW*RW*RNY).fill(255);
 const RST = new Uint16Array(R.length);    // états de blocs de la région (même indexation que R) — lus par les modèles non cubiques (portes, plaques, fils…)
+let _rstCur = false;                      // vrai si la région du mesh en cours contient des états (sinon RST n'est pas lisible : cf. fluid-render.js)
 let _rstUsed = false;                     // vrai si le dernier mesh a copié des états : il faudra alors effacer les colonnes des chunks sans états
 const LS  = new Uint8Array(R.length);     // lumière du ciel 0..15
 const LB  = new Uint8Array(R.length);     // lumière des blocs 0..15
@@ -94,7 +95,7 @@ function buildChunkMesh(cx,cz){
       BIO[rc] = m.bio[col];
     }
   }
-  _rstUsed = rstNow;   // si aucun chunk de la région n'a d'états, RST n'est pas touché (et reste valide pour ce mesh : plus personne ne le lit)
+  _rstUsed = rstNow; _rstCur = rstNow;   // si aucun chunk de la région n'a d'états, RST n'est pas touché (et reste valide pour ce mesh : plus personne ne le lit)
 
   // 1b) teinte d'herbe / feuillage lissée sur 5×5 colonnes (comme le fondu de biomes de Minecraft)
   for(let lx=0;lx<CSIZ;lx++) for(let lz=0;lz<CSIZ;lz++){
@@ -148,7 +149,7 @@ function buildChunkMesh(cx,cz){
   floodLight(LB);
 
   // 4) géométrie
-  const bk = [mkBucket(), mkBucket(), mkBucket(), mkBucket()];
+  const bk = [mkBucket(), mkBucket(), mkBucket(), mkBucket(), mkBucket()];   // solide, cutout, verre, eau, lave
   // Éclairage doux (Minecraft) : 0 = désactivé (lumière plate par face), 1 = minimum, 2 = maximum
   const useSmooth = S.smooth > 0, useAO = useSmooth, aoStep = S.smooth === 1 ? 0.07 : 0.14;
   for(let lx=0;lx<CSIZ;lx++) for(let lz=0;lz<CSIZ;lz++){
@@ -198,6 +199,8 @@ function buildChunkMesh(cx,cz){
         }
         continue;
       }
+
+      if(FLUIDK[bid]){ meshFluid(bid, ri, wx, wy, wz, bk); continue; }   // eau / lave : hauteur des coins, courant, texture animée (render/fluid-render.js)
 
       if(PLANT[bid]){   // plante en croix (2 plans diagonaux, double face)
         const b = bk[1], tile = TILE_SIDE[bid], tu = TILE_U0[tile], tv = TILE_V0[tile];
@@ -310,7 +313,7 @@ function buildChunkMesh(cx,cz){
 
   // 5) création des meshes (puis libération des anciens : pas de clignotement)
   const meshes = [];
-  for(let cls=0; cls<4; cls++){
+  for(let cls=0; cls<5; cls++){
     const b = bk[cls];
     if(!b.n) continue;
     const nv = b.n*4;
