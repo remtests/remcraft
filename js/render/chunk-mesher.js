@@ -6,6 +6,8 @@
 // Région de meshing = 3×3 chunks + 1 colonne de bordure (sentinelle opaque) ; layout colonne : (rz*RW+rx)*RNY + y
 const RW = CSIZ*3+2, RNY = CHH+2, RSX = RNY, RSZ = RNY*RW;
 const R   = new Uint8Array(RW*RW*RNY).fill(255);
+const RST = new Uint16Array(R.length);    // états de blocs de la région (même indexation que R) — lus par les modèles non cubiques (portes, plaques, fils…)
+let _rstUsed = false;                     // vrai si le dernier mesh a copié des états : il faudra alors effacer les colonnes des chunks sans états
 const LS  = new Uint8Array(R.length);     // lumière du ciel 0..15
 const LB  = new Uint8Array(R.length);     // lumière des blocs 0..15
 const HMR = new Uint8Array(RW*RW);        // 1er y (région) exposé au ciel
@@ -77,16 +79,22 @@ function buildChunkMesh(cx,cz){
   const x0 = cx*CSIZ, z0 = cz*CSIZ;
 
   // 1) copie des 3×3 chunks dans la région
+  let rstNow = false;
   for(let dx=-1;dx<=1;dx++) for(let dz=-1;dz<=1;dz++){
     const k2 = ckey(cx+dx,cz+dz), d = CHUNK_DATA.get(k2), m = CHUNK_META.get(k2);
     const rx0 = (dx+1)*CSIZ+1, rz0 = (dz+1)*CSIZ+1;
+    const st = m.st;
+    if(st) rstNow = true;
     for(let lx=0;lx<CSIZ;lx++) for(let lz=0;lz<CSIZ;lz++){
       const col = lx*CSIZ+lz, rc = (rz0+lz)*RW+(rx0+lx);
       R.set(d.subarray(col*CHH, col*CHH+CHH), rc*RNY+1);
+      if(st) RST.set(st.subarray(col*CHH, col*CHH+CHH), rc*RNY+1);
+      else if(_rstUsed) RST.fill(0, rc*RNY+1, rc*RNY+1+CHH);
       HMR[rc] = m.hmL[col]+1;
       BIO[rc] = m.bio[col];
     }
   }
+  _rstUsed = rstNow;   // si aucun chunk de la région n'a d'états, RST n'est pas touché (et reste valide pour ce mesh : plus personne ne le lit)
 
   // 1b) teinte d'herbe / feuillage lissée sur 5×5 colonnes (comme le fondu de biomes de Minecraft)
   for(let lx=0;lx<CSIZ;lx++) for(let lz=0;lz<CSIZ;lz++){
