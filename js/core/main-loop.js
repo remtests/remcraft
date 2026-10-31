@@ -27,6 +27,7 @@ function loop(ts){
   updDay(dt);
   updateClouds(dt);
   updateDrops(dt);
+  updateMobs(dt);
   updateFurnace(dt);
   updateHeldLight(dt);
   updateFire(dt);
