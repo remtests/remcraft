@@ -15,7 +15,7 @@ const FLAT_DROP_IDS = new Set([
   'raw_iron','raw_gold','diamond','coal',
   'iron_ingot','gold_ingot','stick','flint','flint_and_steel',
   'bread','apple','coal','arrow','bow','shears','bucket',
-  'water_bucket','sugar_cane','wheat','torch','saddle',
+  'water_bucket','lava_bucket','sugar_cane','wheat','torch','saddle',
   'iron_sword','iron_pickaxe','iron_axe','iron_shovel','iron_hoe',
   'wooden_sword','wooden_pickaxe','wooden_axe','wooden_shovel','wooden_hoe',
   'stone_sword','stone_pickaxe','stone_axe','stone_shovel','stone_hoe',
@@ -168,16 +168,21 @@ function updateDrops(dt){
     for(let s=0;s<STEPS;s++){
       const ox=d.wx, oz=d.wz;
       d.vy+=GRAV*sub;
+      { const fk = FLUIDK[getB(Math.floor(d.wx), Math.floor(d.wy), Math.floor(d.wz))];   // dans un fluide
+        if(fk===2){ removeDrop(i); break; }                                              // la lave détruit les objets
+        if(fk===1){ d.vy = Math.min(1.2, d.vy + 26*sub); d.onGround=false;               // l'eau les fait flotter et le courant les emporte
+          const fv = fluidFlowVec(Math.floor(d.wx), Math.floor(d.wy), Math.floor(d.wz)); if(fv){ d.vx += fv[0]*2.2*sub; d.vz += fv[1]*2.2*sub; } } }
       d.wy+=d.vy*sub; d.wx+=d.vx*sub; d.wz+=d.vz*sub;
       { const hb=getB(Math.floor(d.wx), Math.floor(d.wy), Math.floor(d.wz));   // un objet jeté s'arrête contre un mur
         if(hb && BLOCKS[hb] && !BLOCKS[hb].noCollide && !BLOCKS[hb].plant){ d.wx=ox; d.wz=oz; d.vx=0; d.vz=0; } }
       const bx=Math.floor(d.wx), bz=Math.floor(d.wz);
       const fb=Math.floor(d.wy-HALF);
       const b=getB(bx,fb,bz);
-      if(d.vy<0 && b && BLOCKS[b]){
+      if(d.vy<0 && b && BLOCKS[b] && !BLOCKS[b].isFluid){
         d.wy=fb+1+HALF; d.vy=0; d.vx=0; d.vz=0; d.onGround=true;
       } else d.onGround=false;
     }
+    if(drops[i]!==d) continue;   // détruit par la lave pendant les sous-pas
     if(d.wy < Y_MIN+HALF){ d.wy=Y_MIN+HALF; d.vy=0; d.onGround=true; }
     { const dmp=Math.pow(0.80, dt*60); d.vx*=dmp; d.vz*=dmp; }   // frottement indépendant du framerate
     if(Math.abs(d.vx)<0.01) d.vx=0;
