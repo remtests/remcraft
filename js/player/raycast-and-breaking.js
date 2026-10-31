@@ -16,7 +16,7 @@ function _rayHitsTorch(bx,by,bz,ox,oy,oz,dx,dy,dz,maxD){
   }
   return true;
 }
-function castRay(maxD=6){
+function castRay(maxD=6, fluidSources=false){   // fluidSources : un seau vide peut cibler une SOURCE de fluide (les fluides dérivés restent traversés)
   const cp=Math.cos(P.pitch),sp=Math.sin(P.pitch);
   const cyw=Math.cos(P.yaw),syw=Math.sin(P.yaw);
   const dx=-cp*syw,dy=sp,dz=-cp*cyw;
@@ -36,7 +36,7 @@ function castRay(maxD=6){
     if(t>maxD) return null;
     const b=getB(bx,by,bz);
     if(b===20 && !_rayHitsTorch(bx,by,bz,ox,oy,oz,dx,dy,dz,maxD)) continue;   // torche : seule la tige (2×10×2 px) est ciblable, le reste de la case laisse passer le rayon
-    if(b&&BLOCKS[b]&&!BLOCKS[b].isFluid) return{bx,by,bz,bid:b,pbx:lx,pby:ly,pbz:lz};
+    if(b&&BLOCKS[b]&&(!BLOCKS[b].isFluid || (fluidSources && getS(bx,by,bz)===0))) return{bx,by,bz,bid:b,pbx:lx,pby:ly,pbz:lz};
   }
   return null;
 }
