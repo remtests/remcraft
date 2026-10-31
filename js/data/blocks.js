@@ -135,6 +135,7 @@ _all('diamond_block', 'Block of Diamond', 'diamond_block', {hard:5, mat:'stone',
 
 // id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
 const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;
+BS.attachAll();   // rattache les schémas d'états (data/block-states.js) aux blocs qui existent maintenant
 function BID(sid){ const v = _SID[sid]; if(v === undefined) throw new Error('bloc inconnu « '+sid+' »'); return v; }
 
 const ITEMS = {
