@@ -54,6 +54,7 @@ SMELT_RECIPES[4] = 14;                                        // sable → verre
 SMELT_RECIPES[BID('red_sand')] = 14;                          // sable rouge → verre
 SMELT_RECIPES[BID('cobbled_deepslate')] = BID('deepslate');   // pavé d'ardoise → ardoise
 for(const w of ['spruce','birch','jungle','acacia','dark_oak']){ FUEL_VALUES[BID(w+'_planks')] = 300; FUEL_VALUES[BID(w+'_log')] = 150; }
+FUEL_VALUES['lava_bucket'] = 20000;                           // 100 fontes ; il reste un seau vide dans l'emplacement
 FUEL_VALUES[BID('coal_block')] = 16000;                       // = 10 × le charbon
 
 function getSmeltResult(id){
@@ -89,7 +90,8 @@ function _tickFurnace(F, dt, auth){
         F.fuelMax  = fticks;
         F.fuelTime = fticks;
         F.fuel.n--;
-        if(F.fuel.n<=0){F.fuel.id=null;F.fuel.n=0;}
+        if(F.fuel.id==='lava_bucket' && F.fuel.n<=0){ F.fuel.id='bucket'; F.fuel.n=1; }
+        else if(F.fuel.n<=0){F.fuel.id=null;F.fuel.n=0;}
         F.active=true;
       } else {
         F.active=false;
