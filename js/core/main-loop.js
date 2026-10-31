@@ -31,6 +31,8 @@ function loop(ts){
   updateFurnace(dt);
   updateHeldLight(dt);
   updateFire(dt);
+  updateFluids(dt);
+  updateFluidVisuals();
   updateCactus();
   updateVisibleChunks();
   processChunkQueue();
