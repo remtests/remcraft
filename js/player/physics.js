@@ -33,7 +33,11 @@ function physStep(){
   let tx=(mx||mz)?mx/L*spd:0, tz=(mx||mz)?mz/L*spd:0;
   if(P.fly){ tx*=2.4; tz*=2.4; }
   const swim = svWaterCheck();   // dans l'eau : déplacement ralenti, on nage avec Espace
-  if(swim){ tx*=0.6; tz*=0.6; }
+  if(swim){
+    const k = SV.inLava ? 0.3 : 0.6; tx*=k; tz*=k;
+    const fv = fluidFlowVec(Math.floor(P.x), Math.floor(P.y+0.2), Math.floor(P.z));   // le courant pousse (vecteur unitaire du gradient de niveaux)
+    if(fv){ tx += fv[0]*FLUID_FLOW_PUSH; tz += fv[1]*FLUID_FLOW_PUSH; }
+  }
   // Easing : la vitesse horizontale rejoint sa cible de façon exponentielle (accélération et freinage progressifs)
   // constantes de temps (s) : au sol accélération 0,09 / freinage 0,06 ; en l'air 0,30 ; en vol 0,12
   const moving = (tx||tz) ? true : false;
@@ -49,6 +53,9 @@ function physStep(){
     P.vy += (tvy - P.vy)*kv;
     if(tvy===0 && Math.abs(P.vy)<1e-3) P.vy = 0;
     P.onGround=false;
+  } else if(swim && SV.inLava){   // lave : on s'enfonce lentement, la nage est très lente
+    P.vy = Math.max(-0.03, P.vy*0.8 - GRAV*0.1);
+    if(K.Space) P.vy = 0.05;
   } else if(swim){
     P.vy = Math.max(-0.05, P.vy*0.85 - GRAV*0.25);
     if(K.Space) P.vy = SV.headWater ? 0.07 : 0.12;   // plus d'élan à la surface pour sortir de l'eau
