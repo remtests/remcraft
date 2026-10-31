@@ -176,7 +176,7 @@ function dirtDepthOf(type, h){ return (type===2 && h>38) || (type===9 && h>42) ?
 
 function generateChunk(cx,cz){
   const data = new Uint8Array(CSIZ*CSIZ*CHH);
-  const meta = {hmL:new Uint8Array(256), top:new Uint8Array(256), bio:new Uint8Array(256), edited:false};
+  const meta = {hmL:new Uint8Array(256), top:new Uint8Array(256), bio:new Uint8Array(256), edited:false, st:null};   // st : états de blocs (Uint16Array, alloué à la demande — voir setB)
   const key = ckey(cx,cz);
   CHUNK_DATA.set(key,data); CHUNK_META.set(key,meta);
   const SD = WORLD_SEED, x0 = cx*CSIZ, z0 = cz*CSIZ;
