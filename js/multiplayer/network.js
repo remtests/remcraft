@@ -139,6 +139,7 @@ function mpClientRecv(m){
     case 'pl': { const p = MP.players.get(m.pid); if(p){ addChat(p.name+' left the game', '#ffff55'); mpRemoveRemote(p); MP.players.delete(m.pid); mpRefreshPause(); } break; }
     case 'id': { const p = mpPlayer(m.f); p.name = mpCleanName(m.n)||'Player'; p.skin = mpCleanSkin(m.u); mpRemoveRemote(p); mpRefreshPause(); break; }
     case 'hello': mpOnHello(m); break;
+    case 'tk': worldFrozen = !!m.f; break;   // l'hôte fige / relance le monde
     case 'tm': dayT = +m.d; dayCount = m.c|0; break;
     case 'wx': wxApplyNet(m, false); break;
     case 'lg': wxStrike(+m.x||0, +m.y||0, +m.z||0, true); break;
@@ -154,7 +155,7 @@ function mpMakeHello(){
   for(const [k,s] of CHESTS) chests.push([k, s.map(x=>[x.id, x.n])]);
   for(const [k,d] of CHEST_DIR) cd.push([k, d]);
   const furnaces = []; for(const k of FURNACES.keys()) furnaces.push(mpFurnaceMsg(k, true));
-  return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount, wx:wxNetState(),
+  return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount, fz:worldFrozen?1:0, wx:wxNetState(),
     edits:[...MP.edits.values()], cd, chests, furnaces,
     fire:FIRE_LIST.map(f=>[f.x, f.y, f.z, f.gen||0, f.block||0]),
     drops:drops.filter(d=>!d.collecting).map(d=>[d.uid, d.wx, d.wy, d.wz, d.id, d.n]),
@@ -177,7 +178,7 @@ function mpOnHello(m){
     mpApplyFires(m.fire||[]);
     for(const a of (m.drops||[])) spawnDrop(a[1], a[2], a[3], a[4], a[5], {remote:true, uid:a[0], vx:0, vy:0, vz:0});
     for(const a of (m.tnt||[])){ const x=+a[1], y=+a[2], z=+a[3]; if(Number.isFinite(x+y+z)) tntSpawn(x, y, z, a[4]|0, {remote:true, uid:String(a[0])}); }
-    dayT = +m.dayT; dayCount = m.dc|0;
+    dayT = +m.dayT; dayCount = m.dc|0; worldFrozen = !!m.fz;
     if(m.wx) wxApplyNet(m.wx, true);
     addChat('Connected to the game. Welcome, '+MP.name+'!', '#ffff55'); mpRefreshPause();
   });
