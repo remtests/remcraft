@@ -62,6 +62,7 @@ function wsSave(){
     p:{x:P.x, y:P.y, z:P.z, yaw:P.yaw, pitch:P.pitch, hot:P.hotbar, fly:!!P.fly,
        inv:P.inv.map(s => ({...s})), off:{...P.offhand}, arm:P.armor.map(s => ({...s}))},
     sv:{hp:SV.hp, food:SV.food, sat:SV.sat, spawn:SV.spawn},
+    wx:wxSave(),
   };
   let json;
   try{ json = JSON.stringify(st); localStorage.setItem(WS_PREFIX+m.id, json); }
@@ -150,6 +151,7 @@ function wsAfterStart(){
     SV.dirty = true;
     if(isFinite(st.dayT)) dayT = ((+st.dayT)%1+1)%1;
     dayCount = Math.max(0, wsNum(st.dc, 0)|0);
+    wxLoad(st.wx);
     drawHotbar(); drawOffhand(); svDraw(true);
     updateVisibleChunks(true);
     const m = wsReadIndex().find(w => w.id===WS.cur);
