@@ -85,8 +85,8 @@ function updateFluidOverlay(){
   if(kind === _ovKind) return;
   _ovKind = kind;
   if(!kind){ el.style.display = 'none'; return; }
-  const url = kind===1 ? FLUID_OV.water : FLUID_OV.lava;
-  el.style.backgroundColor = kind===1 ? 'rgba(25,60,200,0.38)' : 'rgb(215,70,0)';
+  const url = kind===1 ? FLUID_OV.water : null;   // lave : simple masque orange, sans texture
+  el.style.backgroundColor = kind===1 ? 'rgba(25,60,200,0.38)' : 'rgba(215,70,0,0.5)';
   el.style.backgroundImage = url ? 'url('+url+')' : 'none';
   el.style.display = 'block';
 }
