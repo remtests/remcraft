@@ -74,6 +74,7 @@ function updDay(dt){
   _skyC.setRGB(sk.sky[0]/255,sk.sky[1]/255,sk.sky[2]/255);
   _horC.setRGB(sk.hor[0]/255,sk.hor[1]/255,sk.hor[2]/255);
   // fond proche de la couleur du brouillard → pas de "cassure" à l'horizon
+  wxTintSky(_skyC); wxTintSky(_horC);   // pluie / orage / éclair (render/weather.js)
   _clr.copy(_skyC).lerp(_horC,0.55);
   renderer.setClearColor(_clr);
   scene.fog.color.copy(_horC);
@@ -85,7 +86,7 @@ function updDay(dt){
 
   // Lumière ambiante du ciel (précalculée dans les sommets × cette couleur) : jour clair, nuit bleutée
   const dayF=smoothstep01((sunEl+0.12)/0.42);
-  const amb=lerp(0.16, 1.0, dayF);
+  const amb=wxAmbient(lerp(0.16, 1.0, dayF));
   const mxc=Math.max(sk.hem[0],sk.hem[1],sk.hem[2],1);
   const tr=lerp(1,sk.hem[0]/mxc,0.6), tg=lerp(1,sk.hem[1]/mxc,0.6), tb=lerp(1,sk.hem[2]/mxc,0.6);
   LIGHT_UNI.uSkyCol.value.setRGB(tr*amb,tg*amb,tb*amb);
@@ -97,7 +98,7 @@ function updDay(dt){
 
   const h=dayT*24|0, m=((dayT*24-h)*60)|0;
   const ph=dayT<0.2?'🌙':dayT<0.27?'🌅':dayT<0.73?'☀️':dayT<0.80?'🌆':'🌙';
-  const txt=`${ph} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  const txt=`${ph} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}${wxIcon()}`;
   if(txt!==updDay._last){ updDay._last=txt; document.getElementById('clk').textContent=txt; }
 }
 
