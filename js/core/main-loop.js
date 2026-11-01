@@ -24,6 +24,7 @@ function loop(ts){
     svUpdate(dt);   // survie : faim, régénération, dégâts, noyade…
   }
 
+  updateWeather(dt);   // avant updDay : le ciel dépend du niveau de pluie / d'orage
   updDay(dt);
   updateClouds(dt);
   updateDrops(dt);
