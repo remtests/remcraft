@@ -21,7 +21,7 @@ const BLOCKS = {
   15:{name:'Gold Ore', sid:'gold_ore',   tTop:'gold_ore',  tSide:'gold_ore',   tBot:'gold_ore',   hard:4,   drop:'raw_gold', needsPick:2, isCraft:false},
   16:{name:'Diamond Ore', sid:'diamond_ore',tTop:'diamond_ore',tSide:'diamond_ore',tBot:'diamond_ore',hard:5, drop:'diamond', needsPick:2, isCraft:false},
   17:{name:'Bookshelf', sid:'bookshelf',tTop:'planks',  tSide:'bookshelf',  tBot:'planks',     hard:1.5, drop:7,         needsPick:0, isCraft:false},
-  18:{name:'TNT', sid:'tnt',        tTop:'tnt_top',   tSide:'tnt_side',   tBot:'tnt_top',    hard:0,   drop:null,      needsPick:0, isCraft:false},
+  18:{name:'TNT', sid:'tnt',        tTop:'tnt_top',   tSide:'tnt_side',   tBot:'tnt_top',    hard:0,   drop:18,        needsPick:0, isCraft:false},   // cassée à la main : on la récupère (elle ne s'allume pas) ; comportement : blocks/tnt.js
   19:{name:'White Wool', sid:'white_wool',      tTop:'wool',      tSide:'wool',       tBot:'wool',       hard:0.8, drop:19,        needsPick:0, isCraft:false},
   20:{name:'Torch', sid:'torch',     tTop:'torch_block',tSide:'torch_block',tBot:'torch_block',hard:0,  drop:'torch',needsPick:0,isCraft:false,noCollide:true},
   21:{name:'Furnace', sid:'furnace',       tTop:'furnace_top',tSide:'furnace_front',tBot:'stone',   hard:3.5, drop:21,        needsPick:1, isCraft:false, isFurnace:true},
@@ -41,6 +41,7 @@ Object.assign(BLOCKS[5],  {log:true, logX:28, logZ:29, mat:'wood'});          //
 Object.assign(BLOCKS[28], {log:true, axis:'x', tSideR:'log_side_r'});          // axe X : écorce tournée de 90° (tuile générée par l'atlas)
 Object.assign(BLOCKS[29], {log:true, axis:'z', tSideR:'log_side_r'});          // axe Z
 BLOCKS[23].fluid = 'water';                                                    // fluide : états level/falling (data/block-states.js), simulation dans blocks/fluids.js
+BLOCKS[18].mirrorSide = true;                                                  // TNT : le mot « TNT » sur les côtés était en miroir (voir chunk-mesher.js)
 BLOCKS[6].leaves = true;                                                       // feuilles de chêne (cutout + teinte de biome)
 BLOCKS[14].glass = true;                                                       // verre (mesh translucide)
 // Four : côté dédié + face avant orientée (éteinte / allumée). Dessus = furnace_top, dessous = stone (inchangés).
