@@ -103,6 +103,7 @@ function consumeBurning(f){
 // Un pas de simulation pour un feu. Renvoie false si le feu doit s'éteindre.
 function fireTick(f,dt){
   const x=f.x, y=f.y, z=f.z;
+  if(WX.rain > 0.4 && Math.random() < dt*0.5 && wxPrecipAt(x+0.5, y, z+0.5) > 0) return false;   // la pluie / la neige éteignent un feu à l'air libre
   const here = getB(x,y,z);
   if(f.block){ if(here!==f.block) return false; }   // le bloc qui brûlait a disparu
   else if(here && !FIRE_PLANT[here]) return false;  // un bloc a été posé dans la cellule
