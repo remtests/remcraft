@@ -14,6 +14,7 @@ const _fLQ = [];   // relances d'éclairage (étalées dans le temps pour ne pas
 // probabilité par seconde qu'un bloc voisin d'un feu soit consumé
 const FIRE_BURN  = {6:0.07, 5:0.015, 28:0.015, 29:0.015, 7:0.025, 11:0.025, 17:0.04, 27:0.025};   // feuilles, bûche, planches, établi, bibliothèque, coffre
 for(const _id in BLOCKS){ const _b = BLOCKS[_id]; if(_b.burn && !FIRE_BURN[_id]) FIRE_BURN[_id] = _b.burn; }   // planches, bûches et feuilles des autres bois
+FIRE_BURN[18] = 0.5;   // TNT : un feu voisin l'amorce en ~2 s (igniteBlock la redirige vers blocks/tnt.js au lieu de la faire brûler)
 const FIRE_PLANT = {24:1, 25:1, 26:1};                                      // herbe courte, fleurs
 const _FNB = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 const fkey = (x,y,z) => x+','+y+','+z;
@@ -84,6 +85,7 @@ function burnBlock(x,y,z,id){
 
 // Un bloc inflammable prend feu : il RESTE en place, enveloppé de flammes, puis est consumé à la fin de sa combustion
 function igniteBlock(x,y,z,id){
+  if(id===18){ tntIgnite(x,y,z); return null; }   // TNT : elle s'amorce (briquet ou feu voisin) au lieu de brûler
   if(y<Y_MIN || y>Y_MAX || FIRE_LIST.length>=MAX_FIRE) return null;
   const k = fkey(x,y,z);
   if(FIRES.has(k)) return null;
