@@ -11,7 +11,7 @@ const CMD_INFO = {
   give:'Gives an item or block', tp:'Teleports you', time:'Sets, adds or reads the time of day',
   fill:'Fills a region with a block', gamemode:'Changes a game mode (survival, creative, spectator)', locate:'Finds the nearest biome',
   kill:'Kills you, or all mobs with @e', heal:'Restores your health and hunger', help:'Lists the commands',
-  summon:'Summons a mob',
+  summon:'Summons a mob', weather:'Sets the weather (clear, rain, thunder)',
   blockstate:'Shows or changes the state of the block you are looking at'
 };
 const CMDS = Object.keys(CMD_INFO);
@@ -130,6 +130,12 @@ const CMD_SPEC = {
     if(i>0 && sub==='query') return {tokens:['query','<daytime|day>'], cur:on?1:-1, cands:on?['daytime','day']:[], desc:'Time of day, or the number of days played'};
     return {tokens:['<set|add|query>'], cur:0, cands:['set','add','query'], desc:'Set, add to, or read the time of day'};
   },
+  weather(a,i){
+    const sub = (a[0]||'').toLowerCase();
+    if(i>0 && ['clear','rain','thunder'].includes(sub)) return {tokens:[sub,'[duration]'], cur:i===1?1:-1, cands:i===1?['6000','300s','1d']:[], desc:'Duration in ticks (20 = 1 s), or with a suffix: 300s, 1d (1 day = 24000 ticks)'};
+    if(i>0 && sub==='query') return {tokens:['query'], cur:-1, cands:[], desc:'Shows the current weather'};
+    return {tokens:['<clear|rain|thunder|query>'], cur:0, cands:['clear','rain','thunder','query'], desc:'Sets the weather, or reads it'};
+  },
   fill(a,i){
     const mode = (a[7]||'').toLowerCase(), D = ['First corner X','First corner Y','First corner Z','Opposite corner X','Opposite corner Y','Opposite corner Z',
       'Block to fill with (air to clear)','replace · destroy · keep · hollow · outline','Only replace this block (with replace)'];
@@ -234,6 +240,7 @@ function runCommand(line){
     if(cmd==='give') cmdGive(a);
     else if(cmd==='tp' || cmd==='teleport') cmdTp(a);
     else if(cmd==='time') cmdTime(a);
+    else if(cmd==='weather') cmdWeather(a);
     else if(cmd==='fill') cmdFill(a);
     else if(cmd==='blockstate') cmdBlockState(a);
     else if(cmd==='gamemode' || cmd==='gm') cmdGamemode(a);
@@ -332,6 +339,7 @@ function cmdHelp(){
     '/tp <player>  — teleports you to another player (multiplayer)',
     '/tp <x> <y> <z> [yaw] [pitch]  — teleport (~ = relative, e.g. /tp ~ ~10 ~); /tp <x> <z> = to the surface',
     '/time set <day|noon|night|midnight|sunrise|sunset|ticks> · /time add <ticks> · /time query <daytime|day>',
+    '/weather <clear|rain|thunder> [duration]  — sets the weather (duration in ticks, or 300s / 1d) · /weather query',
     '/gamemode <survival|creative|spectator> [player]  — changes your game mode (or another player\'s, host only)',
     '/summon <mob> [x y z]  — summons a mob (cow, zombie) at the block you look at, or at the given position (Tab: list of mobs)',
     '/kill  — kills you · /kill @e  — removes every mob (/kill @e[type=cow] : one kind) · /heal  — restores health and hunger',
