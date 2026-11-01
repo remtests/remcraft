@@ -101,6 +101,7 @@ function mpHostRecv(c, m){
   }
   else if(m.t==='fi') mpFireReq(m);
   else if(m.t==='fx') removeFireAt(m.x|0, m.y|0, m.z|0);
+  else if(m.t==='ti') mpTntReq(m);   // un client allume une TNT : l'hôte la simule
   else if(MP_RELAY.has(m.t)){ mpRecvGame(m); mpBroadcast(m, c.pid); }
 }
 
@@ -156,7 +157,8 @@ function mpMakeHello(){
   return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount, wx:wxNetState(),
     edits:[...MP.edits.values()], cd, chests, furnaces,
     fire:FIRE_LIST.map(f=>[f.x, f.y, f.z, f.gen||0, f.block||0]),
-    drops:drops.filter(d=>!d.collecting).map(d=>[d.uid, d.wx, d.wy, d.wz, d.id, d.n])};
+    drops:drops.filter(d=>!d.collecting).map(d=>[d.uid, d.wx, d.wy, d.wz, d.id, d.n]),
+    tnt:TNTS.filter(t=>!t.remote).map(t=>[t.uid, t.x, t.y, t.z, t.fuse])};
 }
 function mpHelloTo(c){ c.hello = true; try{ c.conn.send(mpMakeHello()); }catch(e){ console.error(e); } }
 function mpHello(){ for(const c of MP.conns.values()) if(c.ready && !c.hello) mpHelloTo(c); }   // appelé quand l'hôte démarre son monde
@@ -174,6 +176,7 @@ function mpOnHello(m){
     for(const f of (m.furnaces||[])) mpSetFurnace(f);
     mpApplyFires(m.fire||[]);
     for(const a of (m.drops||[])) spawnDrop(a[1], a[2], a[3], a[4], a[5], {remote:true, uid:a[0], vx:0, vy:0, vz:0});
+    for(const a of (m.tnt||[])){ const x=+a[1], y=+a[2], z=+a[3]; if(Number.isFinite(x+y+z)) tntSpawn(x, y, z, a[4]|0, {remote:true, uid:String(a[0])}); }
     dayT = +m.dayT; dayCount = m.dc|0;
     if(m.wx) wxApplyNet(m.wx, true);
     addChat('Connected to the game. Welcome, '+MP.name+'!', '#ffff55'); mpRefreshPause();
@@ -191,6 +194,9 @@ function mpRecvGame(m){
     case 'du': { const d = drops.find(d=>d.uid===m.u); if(d) d.n = m.n|0; break; }
     case 'ch': mpSetChest(m.k, m.s); break;
     case 'fu': mpSetFurnace(m); break;
+    case 'tn': mpTntSpawn(m); break;    // TNT amorcée (hôte → clients)
+    case 'tu': mpTntUpdate(m); break;   // positions / fusibles des TNT
+    case 'ex': mpTntBoom(m); break;     // explosion
     case 'gm':   // l'hôte change le mode de jeu d'un joueur : seul un message de l'hôte (H) destiné à ce joueur est accepté
       if(m.f==='H' && m.to===MP.pid && GM_LABEL[m.m]){ applyGameMode(m.m); addChat('Your game mode has been updated to '+GM_LABEL[m.m], '#ffff55'); }
       break;
@@ -349,7 +355,7 @@ function mpLost(){
   const wasClient = MP.role==='client', wasIn = gameOn;
   mpClose();
   mpStatus('Disconnected.', true);
-  if(wasIn && wasClient){ addChat('Multiplayer: connection to the host lost.', '#ff5555'); fireReset(); }
+  if(wasIn && wasClient){ addChat('Multiplayer: connection to the host lost.', '#ff5555'); fireReset(); tntReset(); }
   mpRefreshPause();
 }
 function mpRefreshPause(){
