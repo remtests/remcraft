@@ -89,7 +89,10 @@ function updateClouds(dt){
   // couleur selon l'heure : blanc le jour, teinté au lever/coucher, gris-bleu sombre la nuit
   const sk = sampleSky(dayT), br = Math.max(0, Math.min(1, 0.2 + 0.8*sk.sun/1.2)), tf = Math.max(0, Math.min(1, 1 - sk.sun/1.2))*0.45;
   const r = Math.max(0.10, (1-tf + tf*sk.hor[0]/255)*br), g = Math.max(0.11, (1-tf + tf*sk.hor[1]/255)*br), b = Math.max(0.17, (1-tf + tf*sk.hor[2]/255)*br);
-  _clMat.color.setRGB(r,g,b);
+  // mauvais temps : nuages plus gris, plus sombres et plus opaques (orage : presque noirs)
+  const rw = WX.rain, tw = wxThunderEff(), gy = (r+g+b)/3, mixG = Math.min(1, rw*0.75), dk = 1 - 0.30*rw - 0.35*tw;
+  _clMat.color.setRGB((r*(1-mixG) + gy*0.8*mixG)*dk, (g*(1-mixG) + gy*0.8*mixG)*dk, (b*(1-mixG) + gy*0.8*mixG)*dk);
+  _clMat.opacity = 0.85 + 0.13*rw;
 }
 
 // Soleil/lune : plaques fixes dans le repère du monde, tangentes à la voûte céleste (plus de billboard orienté vers la caméra).
@@ -106,6 +109,9 @@ function _orientSky(mesh, dir){   // dir : direction (unitaire) du centre du cie
 function updateSkyBodies(){
   if(!skyScene) return;
   setMoonPhase(dayCount%8);
+  const wxVis = 1 - 0.92*WX.rain;   // le soleil et la lune disparaissent derrière les nuages quand il pleut
+  if(sunObj) sunObj.m.material.opacity = wxVis;
+  if(moonObj) moonObj.m.material.opacity = wxVis;
   if(sunObj){
     sunObj.m.position.copy(camera.position).addScaledVector(_sd,SKY_D);
     _orientSky(sunObj.m,_sd);
