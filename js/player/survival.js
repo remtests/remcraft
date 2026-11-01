@@ -26,7 +26,7 @@ const SV_MAX = 20, SV_AIR_MAX = 15, SV_EAT_TIME = 1.6;
 const FOOD_VALUES = { apple:{f:4, m:0.3}, bread:{f:5, m:0.6} };
 const SV_CAUSE = {
   fall:'fell from a high place', drown:'drowned', starve:'starved to death', cactus:'was pricked to death',
-  fire:'burned to death', kill:'died', void:'fell out of the world', lava:'tried to swim in lava'
+  fire:'burned to death', kill:'died', void:'fell out of the world', lava:'tried to swim in lava', lightning:'was struck by lightning'
 };
 const svSafe = () => WORLD.mode==='creative' || WORLD.mode==='spectator';   // modes sans vie ni faim
 const svOn = () => WORLD.mode==='survival' && !SV.dead;
@@ -230,6 +230,7 @@ function svUpdate(dt){
   if(SV.inLava){ svDamage(4,'lava',{armor:false}); SV.burn = Math.max(SV.burn, 15); }
   // feu : brûlure 1 PV / s, éteinte par l'eau
   if(SV.inWater && !SV.inLava) SV.burn = 0;
+  else if(SV.burn > 0 && !SV.inLava && wxPrecipAt(P.x, P.y, P.z) === 1) SV.burn = 0;   // la pluie éteint le joueur
   if(SV.burn>0){
     SV.burn -= dt; SV.burnT += dt;
     if(SV.burnT>=1){ SV.burnT -= 1; svDamage(1,'fire',{force:true}); }
