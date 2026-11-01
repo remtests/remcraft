@@ -32,6 +32,7 @@ function loop(ts){
   updateFurnace(dt);
   updateHeldLight(dt);
   updateFire(dt);
+  updateTnt(dt);
   updateFluids(dt);
   updateFluidVisuals();
   updateCactus();
