@@ -24,18 +24,22 @@ function loop(ts){
     svUpdate(dt);   // survie : faim, régénération, dégâts, noyade…
   }
 
-  updateWeather(dt);   // avant updDay : le ciel dépend du niveau de pluie / d'orage
-  updDay(dt);
+  if(!worldFrozen) updateWeather(dt);   // avant updDay : le ciel dépend du niveau de pluie / d'orage
+  updDay(worldFrozen ? 0 : dt);         // /tick freeze : le monde s'arrête, le joueur continue de bouger
   updateClouds(dt);
-  updateDrops(dt);
-  updateMobs(dt);
-  updateFurnace(dt);
+  if(!worldFrozen){
+    updateDrops(dt);
+    updateMobs(dt);
+    updateFurnace(dt);
+  }
   updateHeldLight(dt);
-  updateFire(dt);
-  updateTnt(dt);
-  updateFluids(dt);
+  if(!worldFrozen){
+    updateFire(dt);
+    updateTnt(dt);
+    updateFluids(dt);
+  }
   updateFluidVisuals();
-  updateCactus();
+  if(!worldFrozen) updateCactus();
   updateVisibleChunks();
   processChunkQueue();
 
