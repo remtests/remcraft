@@ -27,6 +27,7 @@ const FACES = [
   {n:[0,0,1], t:2, sh:0.92, off:RSZ,      a1:0, a2:1, v:[[1,0,1],[1,1,1],[0,1,1],[0,0,1]]},
   {n:[0,0,-1],t:2, sh:0.72, off:-RSZ,     a1:0, a2:1, v:[[0,0,0],[0,1,0],[1,1,0],[1,0,0]]},
 ];
+const MIRSIDE = new Uint8Array(256); for(const id in BLOCKS) MIRSIDE[id] = BLOCKS[id].mirrorSide ? 1 : 0;   // flag blocks.js : faces latérales retournées horizontalement
 const LEAF_INSET = 0.03;   // retrait (en blocs) des faces de feuillage en contact avec un autre feuillage
 const AXSTRIDE = [RSX, 1, RSZ];   // x, y, z
 for(const F of FACES){
@@ -300,6 +301,7 @@ function buildChunkMesh(cx,cz){
             } else if(isChestB){   // coffre : boîte 14×14×14 px (retrait de 1/16 sur les côtés, hauteur 14/16) ; cas particulier : la tuile 16×16 ENTIÈRE est plaquée sur chaque face (UV 0..1, pas de recadrage)
               bq.pos[p+k*3] = wx+(v[0]?0.9375:0.0625); bq.pos[p+k*3+1] = wy+v[1]*0.875; bq.pos[p+k*3+2] = wz+(v[2]?0.9375:0.0625);
             } else { bq.pos[p+k*3] = wx+v[0]-F.n[0]*ins; bq.pos[p+k*3+1] = wy+v[1]-F.n[1]*ins; bq.pos[p+k*3+2] = wz+v[2]-F.n[2]*ins; }
+            if(F.t===2 && MIRSIDE[bid]) qu = 1-qu;   // côtés retournés horizontalement (texte lisible : TNT)
             bq.uv[u+k*2]   = tu + qu*TILE_W;
             bq.uv[u+k*2+1] = tv + qv*TILE_W;
             const cc = 255*sh*_ao[k];
