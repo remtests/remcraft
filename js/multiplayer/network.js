@@ -139,6 +139,8 @@ function mpClientRecv(m){
     case 'id': { const p = mpPlayer(m.f); p.name = mpCleanName(m.n)||'Player'; p.skin = mpCleanSkin(m.u); mpRemoveRemote(p); mpRefreshPause(); break; }
     case 'hello': mpOnHello(m); break;
     case 'tm': dayT = +m.d; dayCount = m.c|0; break;
+    case 'wx': wxApplyNet(m, false); break;
+    case 'lg': wxStrike(+m.x||0, +m.y||0, +m.z||0, true); break;
     case 'fi': mpApplyFires([[m.x|0, m.y|0, m.z|0, m.g|0, m.b|0]]); break;
     case 'fx': MP.fireApply = true; try{ removeFireAt(m.x|0, m.y|0, m.z|0); }finally{ MP.fireApply = false; } break;
     default: mpRecvGame(m);
@@ -151,7 +153,7 @@ function mpMakeHello(){
   for(const [k,s] of CHESTS) chests.push([k, s.map(x=>[x.id, x.n])]);
   for(const [k,d] of CHEST_DIR) cd.push([k, d]);
   const furnaces = []; for(const k of FURNACES.keys()) furnaces.push(mpFurnaceMsg(k, true));
-  return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount,
+  return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount, wx:wxNetState(),
     edits:[...MP.edits.values()], cd, chests, furnaces,
     fire:FIRE_LIST.map(f=>[f.x, f.y, f.z, f.gen||0, f.block||0]),
     drops:drops.filter(d=>!d.collecting).map(d=>[d.uid, d.wx, d.wy, d.wz, d.id, d.n])};
@@ -173,6 +175,7 @@ function mpOnHello(m){
     mpApplyFires(m.fire||[]);
     for(const a of (m.drops||[])) spawnDrop(a[1], a[2], a[3], a[4], a[5], {remote:true, uid:a[0], vx:0, vy:0, vz:0});
     dayT = +m.dayT; dayCount = m.dc|0;
+    if(m.wx) wxApplyNet(m.wx, true);
     addChat('Connected to the game. Welcome, '+MP.name+'!', '#ffff55'); mpRefreshPause();
   });
 }
