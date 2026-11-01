@@ -14,7 +14,9 @@ const CMD_INFO = {
   summon:'Summons a mob', weather:'Sets the weather (clear, rain, thunder)',
   blockstate:'Shows or changes the state of the block you are looking at'
 };
+CMD_INFO.tick = 'Freezes or unfreezes the world';
 const CMDS = Object.keys(CMD_INFO);
+let worldFrozen = false;   // /tick freeze : mobs, objets, fluides, feu, TNT, fours, météo et heure du jour s'arrêtent (le joueur continue de bouger)
 const CMD_ALIAS = {teleport:'tp', gm:'gamemode', '?':'help'};
 
 function addChat(text, color){
@@ -159,6 +161,7 @@ const CMD_SPEC = {
     return {tokens:['<mob>','[x]','[y]','[z]'], cur: i<4 ? i : -1, cands: i===0 ? Object.keys(MOB_TYPES) : (i<4 ? _coordC(i-1) : []),
       desc: i===0 ? 'Mob to summon, at the block you look at (or at your feet)' : (D[i]||'')};
   },
+  tick(a,i){ return {tokens:['<freeze|unfreeze|query>'], cur: i<1?0:-1, cands: i===0 ? ['freeze','unfreeze','query'] : [], desc: i===0 ? 'Freezes the world (time, mobs, items, fluids, fire, TNT…), unfreezes it, or reads its state' : ''}; },
   heal(){ return {tokens:[], cur:-1, cands:[], desc:'Restores health and hunger'}; },
   help(){ return {tokens:[], cur:-1, cands:[], desc:'Lists the commands'}; }
 };
@@ -244,6 +247,7 @@ function runCommand(line){
     else if(cmd==='fill') cmdFill(a);
     else if(cmd==='blockstate') cmdBlockState(a);
     else if(cmd==='gamemode' || cmd==='gm') cmdGamemode(a);
+    else if(cmd==='tick') cmdTick(a);
     else if(cmd==='locate') cmdLocate(a);
     else if(cmd==='summon') cmdSummon(a);
     else if(cmd==='kill'){
@@ -343,6 +347,7 @@ function cmdHelp(){
     '/gamemode <survival|creative|spectator> [player]  — changes your game mode (or another player\'s, host only)',
     '/summon <mob> [x y z]  — summons a mob (cow, zombie) at the block you look at, or at the given position (Tab: list of mobs)',
     '/kill  — kills you · /kill @e  — removes every mob (/kill @e[type=cow] : one kind) · /heal  — restores health and hunger',
+    '/tick <freeze|unfreeze|query>  — freezes the world (time, mobs, items, fluids, fire, TNT…) or unfreezes it',
     '/locate biome <biome>  — finds the nearest biome (Tab: list of biomes)',
     '/fill <x1 y1 z1> <x2 y2 z2> <block> [replace [filter]|destroy|keep|hollow|outline]  (max 32768 blocks)',
     '/blockstate [prop=value,…]  — shows (or changes) the state of the block you look at · blocks with states: block[prop=value,…] in /fill'
@@ -462,6 +467,18 @@ function cmdTp(a){
 }
 
 const TIME_PRESETS = {day:1000, noon:6000, sunset:12000, night:13000, midnight:18000, sunrise:23000};
+function cmdTick(a){
+  const sub = (a[0]||'').toLowerCase();
+  if(sub==='query') return chatOk(worldFrozen ? 'The game is frozen' : 'The game is running normally');
+  if(sub!=='freeze' && sub!=='unfreeze') return chatErr('Usage: /tick <freeze|unfreeze|query>');
+  if(MP.open && MP.role==='client') return chatErr('Only the host can freeze the world.');
+  const f = sub==='freeze';
+  if(f === worldFrozen) return chatErr(f ? 'The game is already frozen' : 'The game is not frozen');
+  worldFrozen = f;
+  if(MP.open) mpBroadcast({t:'tk', f: f?1:0}, null);
+  chatOk(f ? 'The game is frozen' : 'The game is running normally');
+}
+
 function cmdTime(a){
   const sub = (a[0]||'').toLowerCase();
   const curTicks = () => Math.round((((dayT-0.25)%1)+1)%1*24000) % 24000;
