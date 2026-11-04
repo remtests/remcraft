@@ -213,13 +213,26 @@ const ITEM_TEX_DATA = {
   "oak_sign": "assets/textures/items/oak_sign.png",
   "torch": "assets/textures/items/torch.png",
   "saddle": "assets/textures/items/saddle.png",
+  "spawn_egg": "assets/textures/items/spawn_egg.png",                    // fond des œufs d'apparition (teinté par mob, cf. SPAWN_EGGS)
+  "spawn_egg_overlay": "assets/textures/items/spawn_egg_overlay.png",  // taches
 };
 
 
 // Textures de créatures (64×32 ou 64×64, gardées telles quelles). Pour ajouter une créature : sa texture ici + une entrée dans MOB_TYPES (entities/mobs.js).
 const MOB_TEX_DATA = {
   "cow": "assets/textures/mobs/cow.png",
-  "zombie": "assets/textures/mobs/zombie.png"
+  "zombie": "assets/textures/mobs/zombie.png",
+  "pig": "assets/textures/mobs/pig.png",
+  "sheep": "assets/textures/mobs/sheep.png",
+  "sheep_fur": "assets/textures/mobs/sheep_fur.png",          // couche de laine du mouton
+  "chicken": "assets/textures/mobs/chicken.png",
+  "creeper": "assets/textures/mobs/creeper.png",
+  "spider": "assets/textures/mobs/spider.png",
+  "spider_eyes": "assets/textures/mobs/spider_eyes.png",      // couche lumineuse (yeux)
+  "skeleton": "assets/textures/mobs/skeleton.png",
+  "enderman": "assets/textures/mobs/enderman.png",
+  "enderman_eyes": "assets/textures/mobs/enderman_eyes.png",  // couche lumineuse (yeux)
+  "villager": "assets/textures/mobs/villager.png"
 };
 
 const ARMOR_TEX_DATA = {
