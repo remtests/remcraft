@@ -28,6 +28,8 @@ const FLAT_DROP_IDS = new Set([
   'oak_sign',
 ]);
 
+for(const mob in SPAWN_EGGS) FLAT_DROP_IDS.add(mob+'_spawn_egg');   // les œufs d'apparition sont des items plats
+
 // Lumière dynamique : les drops reçoivent la torche en main (locale + autres joueurs) et les feux, comme le décor (mêmes uniformes LIGHT_UNI)
 function patchDropShader(sh){
   sh.uniforms.uBlkCol = LIGHT_UNI.uBlkCol;
