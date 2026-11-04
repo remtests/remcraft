@@ -1,12 +1,14 @@
 'use strict';
 
 // ════════════════════════════════════════════════
-// MOBS — créatures (vache, zombie)
+// MOBS — créatures (vache, cochon, mouton, poulet, villageois, zombie, squelette, creeper, araignée, enderman)
 //  · modèles en boîtes texturées (mêmes UV que skinBox / armorBox, taille de texture variable)
 //  · physique AABB sur les blocs (gravité, collisions, saut automatique d'un bloc, eau, chute)
 //  · PROFILS D'IA (table MOB_AI) :
 //      passive    : erre au hasard par intermittence, regarde le joueur de près, fuit quand on le frappe
 //      aggressive : repère le joueur (distance + ligne de vue), le poursuit et l'attaque au corps à corps
+//      neutral    : inoffensive tant qu'on ne la frappe pas (enderman), puis poursuit et attaque
+//  · boîtes : g = gonflement en px (couche de laine), t = texture propre à la boîte (couche), glow = couche lumineuse (yeux)
 //  · le joueur peut les frapper (clic gauche) : dégâts selon l'outil, coup critique en chute, recul
 //
 // Ajouter une créature = une entrée dans MOB_TYPES (+ sa texture dans MOB_TEX_DATA, texture-manifest.js).
@@ -22,9 +24,22 @@ const MOB_FAR = 160;         // au-delà de cette distance au joueur, la créatu
 const MOB_AI = {
   passive:    { flee:true,  hunt:false },
   aggressive: { flee:false, hunt:true, sight:24, lose:32, memory:6, reach:1.7 },
+  neutral:    { flee:false, hunt:true, prov:true, sight:0, lose:32, memory:30, reach:2.0 },   // prov : ne repère rien seule, ne poursuit qu'après avoir été frappée
   // sight : distance de détection (avec ligne de vue) · lose : distance à laquelle on abandonne la poursuite
   // memory : secondes de poursuite après avoir perdu le joueur de vue (ou après avoir été frappé) · reach : portée d'attaque
 };
+
+// 8 pattes d'araignée : angles de repos du modèle Minecraft (Z : écartement vers le bas, Y : balayage), inversés ici (axes y haut / z vers l'avant)
+const SPIDER_LEGS = {};
+const SPIDER_LEG_ORDER = [];
+(function(){
+  const q = Math.PI/4, Z = [-q, -q*0.74, -q*0.74, -q], Y = [q, q/2, -q/2, -q], ZS = [-2,-1,0,1];
+  for(let i=0;i<4;i++) for(const side of [1,-1]){   // 1 = droite (x < 0), -1 = gauche
+    const name = (side>0?'r':'l')+'Leg'+i;
+    SPIDER_LEGS[name] = {p:[-4*side, 9, ZS[i]], r:[0, -side*Y[i], -side*Z[i]], boxes:[{s:[16,2,2], uv:[18,0], c:[-7*side,0,0]}]};
+    SPIDER_LEG_ORDER.push({name, i, side});
+  }
+})();
 
 // ── Créatures ──
 // Modèle en pixels (1 px = 1/16 bloc), y vers le haut depuis les pieds, la créature regarde vers +z.
@@ -60,6 +75,117 @@ const MOB_TYPES = {
       lLeg: {p:[ 2,12,0], boxes:[{s:[4,12,4], uv:[0,16],  c:[0,-6,0], m:true}]},
     }
   },
+  pig: {
+    name:'Pig', tex:'pig', ai:'passive', gait:'quad',
+    w:0.9, h:0.9, hp:10, scale:1/16,
+    speed:1.4, fleeSpeed:2.8, turn:5, look:6,
+    parts:{
+      head:   {p:[0,12,6], boxes:[{s:[8,8,8], uv:[0,0],   c:[0,0,4]},
+                                  {s:[4,3,1], uv:[16,16], c:[0,-1.5,8.5]}]},   // groin
+      body:   {p:[0,13,-2], r:[Math.PI/2,0,0], boxes:[{s:[10,16,8], uv:[28,8], c:[0,2,3]}]},
+      hindR:  {p:[-3,6,-7], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+      hindL:  {p:[ 3,6,-7], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+      frontR: {p:[-3,6, 5], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+      frontL: {p:[ 3,6, 5], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+    }
+  },
+  sheep: {
+    name:'Sheep', tex:'sheep', ai:'passive', gait:'quad',
+    w:0.9, h:1.3, hp:8, scale:1/16,
+    speed:1.4, fleeSpeed:2.9, turn:5, look:6,
+    parts:{
+      head:   {p:[0,18,8], boxes:[{s:[6,6,8], uv:[0,0], c:[0,1,2]},
+                                  {s:[6,6,6], uv:[0,0], c:[0,1,1], g:0.6, t:'sheep_fur'}]},
+      body:   {p:[0,19,-2], r:[Math.PI/2,0,0], boxes:[{s:[8,16,6], uv:[28,8], c:[0,2,4]},
+                                                      {s:[8,16,6], uv:[28,8], c:[0,2,4], g:1.75, t:'sheep_fur'}]},
+      hindR:  {p:[-3,12,-7], boxes:[{s:[4,12,4], uv:[0,16], c:[0,-6,0]}, {s:[4,6,4], uv:[0,16], c:[0,-3,0], g:0.5, t:'sheep_fur'}]},
+      hindL:  {p:[ 3,12,-7], boxes:[{s:[4,12,4], uv:[0,16], c:[0,-6,0]}, {s:[4,6,4], uv:[0,16], c:[0,-3,0], g:0.5, t:'sheep_fur'}]},
+      frontR: {p:[-3,12, 5], boxes:[{s:[4,12,4], uv:[0,16], c:[0,-6,0]}, {s:[4,6,4], uv:[0,16], c:[0,-3,0], g:0.5, t:'sheep_fur'}]},
+      frontL: {p:[ 3,12, 5], boxes:[{s:[4,12,4], uv:[0,16], c:[0,-6,0]}, {s:[4,6,4], uv:[0,16], c:[0,-3,0], g:0.5, t:'sheep_fur'}]},
+    }
+  },
+  chicken: {
+    name:'Chicken', tex:'chicken', ai:'passive', gait:'chicken', slowFall:true,
+    w:0.4, h:0.7, hp:4, scale:1/16,
+    speed:1.2, fleeSpeed:2.6, turn:6, look:5,
+    parts:{
+      head:  {p:[0,9,4], boxes:[{s:[4,6,3], uv:[0,0],   c:[0,3,0.5]},
+                                {s:[4,2,2], uv:[14,0],  c:[0,3,3]},      // bec
+                                {s:[2,2,2], uv:[14,4],  c:[0,1,2]}]},    // caroncule
+      body:  {p:[0,8,0], r:[Math.PI/2,0,0], boxes:[{s:[6,8,6], uv:[0,9], c:[0,0,0]}]},
+      rLeg:  {p:[-2,5,-1], boxes:[{s:[3,5,3], uv:[26,0], c:[0.5,-2.5,1.5]}]},
+      lLeg:  {p:[ 1,5,-1], boxes:[{s:[3,5,3], uv:[26,0], c:[0.5,-2.5,1.5]}]},
+      rWing: {p:[-4,11,0], boxes:[{s:[1,4,6], uv:[24,13], c:[0.5,-2,0]}]},
+      lWing: {p:[ 4,11,0], boxes:[{s:[1,4,6], uv:[24,13], c:[-0.5,-2,0]}]},
+    }
+  },
+  villager: {
+    name:'Villager', tex:'villager', ai:'passive', gait:'biped',
+    w:0.6, h:1.95, hp:20, scale:0.9375/16,
+    speed:1.2, fleeSpeed:2.6, turn:6, look:6,
+    parts:{
+      head: {p:[0,24,0], boxes:[{s:[8,10,8], uv:[0,0],  c:[0,5,0]},
+                                {s:[2,4,2],  uv:[24,0], c:[0,1,5]}]},     // nez
+      body: {p:[0,24,0], boxes:[{s:[8,12,6], uv:[16,20], c:[0,-6,0]},
+                                {s:[8,18,6], uv:[0,38],  c:[0,-9,0], g:0.5}]},   // robe
+      arms: {p:[0,21,1], r:[-0.75,0,0], boxes:[{s:[4,8,4], uv:[44,22], c:[-6,-2,1]},
+                                               {s:[4,8,4], uv:[44,22], c:[6,-2,1], m:true},
+                                               {s:[8,4,4], uv:[40,38], c:[0,-4,0]}]},   // bras croisés
+      rLeg: {p:[-2,12,0], boxes:[{s:[4,12,4], uv:[0,22], c:[0,-6,0]}]},
+      lLeg: {p:[ 2,12,0], boxes:[{s:[4,12,4], uv:[0,22], c:[0,-6,0], m:true}]},
+    }
+  },
+  skeleton: {
+    name:'Skeleton', tex:'skeleton', ai:'aggressive', gait:'biped', arms:'raised',
+    w:0.6, h:1.99, hp:20, scale:1/16, damage:3,
+    speed:1.6, chaseSpeed:3.3, turn:7, look:0,
+    parts:{
+      head: {p:[0,24,0],  boxes:[{s:[8,8,8],  uv:[0,0],   c:[0,4,0]}]},
+      body: {p:[0,24,0],  boxes:[{s:[8,12,4], uv:[16,16], c:[0,-6,0]}]},
+      rArm: {p:[-5,22,0], boxes:[{s:[2,12,2], uv:[40,16], c:[0,-4,0]}]},
+      lArm: {p:[ 5,22,0], boxes:[{s:[2,12,2], uv:[40,16], c:[0,-4,0], m:true}]},
+      rLeg: {p:[-2,12,0], boxes:[{s:[2,12,2], uv:[0,16],  c:[0,-6,0]}]},
+      lLeg: {p:[ 2,12,0], boxes:[{s:[2,12,2], uv:[0,16],  c:[0,-6,0], m:true}]},
+    }
+  },
+  creeper: {
+    name:'Creeper', tex:'creeper', ai:'aggressive', gait:'quad', explode:3,
+    w:0.6, h:1.7, hp:20, scale:1/16,
+    speed:1.6, chaseSpeed:3.3, turn:7, look:0,
+    parts:{
+      head:   {p:[0,18,0], boxes:[{s:[8,8,8],  uv:[0,0],   c:[0,4,0]}]},
+      body:   {p:[0,18,0], boxes:[{s:[8,12,4], uv:[16,16], c:[0,-6,0]}]},
+      hindR:  {p:[-2,6,-4], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+      hindL:  {p:[ 2,6,-4], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+      frontR: {p:[-2,6, 4], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+      frontL: {p:[ 2,6, 4], boxes:[{s:[4,6,4], uv:[0,16], c:[0,-3,0]}]},
+    }
+  },
+  spider: {
+    name:'Spider', tex:'spider', ai:'aggressive', gait:'spider',
+    w:1.4, h:0.9, hp:16, scale:1/16, damage:2, climb:true,   // climb : grimpe aux murs
+    speed:1.8, chaseSpeed:4.4, turn:8, look:0,
+    parts:Object.assign({
+      head:  {p:[0,9,3],  boxes:[{s:[8,8,8], uv:[32,4], c:[0,0,4]},
+                                 {s:[8,8,8], uv:[32,4], c:[0,0,4], g:0.02, t:'spider_eyes', glow:true}]},
+      neck:  {p:[0,9,0],  boxes:[{s:[6,6,6],   uv:[0,0],  c:[0,0,0]}]},
+      abdomen:{p:[0,9,-9], boxes:[{s:[10,8,12], uv:[0,12], c:[0,0,0]}]},
+    }, SPIDER_LEGS)
+  },
+  enderman: {
+    name:'Enderman', tex:'enderman', ai:'neutral', gait:'biped', arms:'swing',
+    w:0.6, h:2.9, hp:40, scale:1/16, damage:4, teleport:true,   // teleport : se téléporte (touchée, dans l'eau, loin de sa cible)
+    speed:1.6, chaseSpeed:5.0, turn:8, look:0,
+    parts:{
+      head: {p:[0,38,0], boxes:[{s:[8,8,8], uv:[0,0], c:[0,4,0]},
+                                {s:[8,8,8], uv:[0,0], c:[0,4,0], g:0.02, t:'enderman_eyes', glow:true}]},
+      body: {p:[0,38,0], boxes:[{s:[8,12,4], uv:[32,16], c:[0,-6,0]}]},
+      rArm: {p:[-5,36,0], boxes:[{s:[2,30,2], uv:[56,0], c:[0,-13,0]}]},
+      lArm: {p:[ 5,36,0], boxes:[{s:[2,30,2], uv:[56,0], c:[0,-13,0], m:true}]},
+      rLeg: {p:[-2,30,0], boxes:[{s:[2,30,2], uv:[56,0], c:[0,-15,0]}]},
+      lLeg: {p:[ 2,30,0], boxes:[{s:[2,30,2], uv:[56,0], c:[0,-15,0], m:true}]},
+    }
+  },
 };
 for(const id in MOB_TYPES) SV_CAUSE['mob_'+id] = 'was slain by '+MOB_TYPES[id].name;   // message de mort (survival.js)
 
@@ -67,10 +193,11 @@ for(const id in MOB_TYPES) SV_CAUSE['mob_'+id] = 'was slain by '+MOB_TYPES[id].n
 // MODÈLE
 // ════════════════════════════════════════════════
 const _mobGeos = new Map(), _mobTex = {};
-function mobBoxGeo(w,h,d,u,v,tw,th,mirror){
-  const key = [w,h,d,u,v,tw,th,mirror?1:0].join(',');
+function mobBoxGeo(w,h,d,u,v,tw,th,mirror,grow){
+  grow = grow || 0;
+  const key = [w,h,d,u,v,tw,th,mirror?1:0,grow].join(',');
   let g = _mobGeos.get(key); if(g) return g;
-  g = new THREE.BoxGeometry(w,h,d);
+  g = new THREE.BoxGeometry(w+2*grow,h+2*grow,d+2*grow);   // les UV gardent la taille d'origine de la boîte
   const uv = g.attributes.uv;
   // ordre three.js : +x, -x, +y, -y, +z, -z (la créature regarde vers +z ; sa droite est -x)
   const faces = [
@@ -89,36 +216,52 @@ function mobBoxGeo(w,h,d,u,v,tw,th,mirror){
   _mobGeos.set(key, g);
   return g;
 }
-// Un matériau par créature (la teinte de dégât est individuelle) ; texture et programme de shader partagés.
+// Un matériau par créature ET par texture (la teinte de dégât est individuelle) ; textures et programme de shader partagés.
 // Éclairage dynamique (torche en main, feux) comme les objets au sol ; léger plancher émissif pour rester visible la nuit.
-function mobMaterial(def){
-  let tex = _mobTex[def.tex];
+// glow : couche lumineuse (yeux de l'enderman / de l'araignée), non éclairée.
+function mobTexture(key){
+  let tex = _mobTex[key];
   if(!tex){
-    tex = _mobTex[def.tex] = new THREE.CanvasTexture(MOB_IMG[def.tex]);
+    tex = _mobTex[key] = new THREE.CanvasTexture(MOB_IMG[key]);
     tex.magFilter = THREE.NearestFilter; tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false;
   }
+  return tex;
+}
+function mobMaterial(key, glow){
+  const tex = mobTexture(key);
+  if(glow) return new THREE.MeshBasicMaterial({map:tex, alphaTest:0.5, polygonOffset:true, polygonOffsetFactor:-2, polygonOffsetUnits:-2});
   const mat = new THREE.MeshLambertMaterial({map:tex, emissive:0x222222, emissiveMap:tex, alphaTest:0.5});
   mat.onBeforeCompile = patchDropShader;
   return mat;
 }
 function mobBuildModel(m){
-  const def = m.def, img = MOB_IMG[def.tex], mat = mobMaterial(def);
+  const def = m.def;
   const root = new THREE.Group(), inner = new THREE.Group();
   inner.scale.setScalar(def.scale); root.add(inner);
-  m.parts = {};
+  m.parts = {}; m.mats = [];
+  const cache = {};
+  const matFor = (key, glow) => {
+    const k = key+(glow?'*':'');
+    if(!cache[k]){ cache[k] = mobMaterial(key, glow); if(!glow) m.mats.push(cache[k]); else (m.glowMats = m.glowMats || []).push(cache[k]); }
+    return cache[k];
+  };
+  m.mat = matFor(def.tex, false);
   for(const name in def.parts){
     const ps = def.parts[name], piv = new THREE.Group();
     piv.position.set(ps.p[0], ps.p[1], ps.p[2]);
     if(ps.r) piv.rotation.set(ps.r[0], ps.r[1], ps.r[2]);
     for(const b of ps.boxes){
-      const mesh = new THREE.Mesh(mobBoxGeo(b.s[0],b.s[1],b.s[2], b.uv[0],b.uv[1], img.width, img.height, !!b.m), mat);
+      const tk = b.t || def.tex, img = MOB_IMG[tk];
+      if(!img) continue;   // texture de couche absente : la couche est simplement omise
+      const mesh = new THREE.Mesh(mobBoxGeo(b.s[0],b.s[1],b.s[2], b.uv[0],b.uv[1], img.width, img.height, !!b.m, b.g), matFor(tk, !!b.glow));
       mesh.position.set(b.c[0], b.c[1], b.c[2]);
       piv.add(mesh);
     }
     inner.add(piv); m.parts[name] = piv;
   }
   m.parts.head.rotation.order = 'YXZ';   // d'abord pivoter sur l'axe vertical, puis lever/baisser la tête
-  m.root = root; m.mat = mat;
+  if(def.gait==='spider') for(const L of SPIDER_LEG_ORDER) m.parts[L.name].rotation.order = 'ZYX';   // ordre des rotations des pattes (comme le modèle d'origine)
+  m.root = root;
   scene.add(root);
 }
 
@@ -147,7 +290,7 @@ function spawnMob(id, x, y, z){
 }
 function mobRemove(i){
   const m = MOBS[i];
-  scene.remove(m.root); m.mat.dispose();
+  scene.remove(m.root); for(const x of m.mats) x.dispose(); if(m.glowMats) for(const x of m.glowMats) x.dispose();
   MOBS.splice(i,1);
 }
 function mobKillAll(typeId){   // /kill @e : renvoie le nombre de créatures retirées
@@ -156,6 +299,41 @@ function mobKillAll(typeId){   // /kill @e : renvoie le nombre de créatures ret
   return n;
 }
 function mobsClear(){ mobKillAll(); }
+
+// ════════════════════════════════════════════════
+// TÉLÉPORTATION (enderman)
+// ════════════════════════════════════════════════
+// Cherche un endroit libre (sol plein dessous, place pour la créature, hors fluide) autour de (cx,cz) dans un rayon r, en balayant de haut en bas.
+function mobFindSpot(m, cx, cz, r, minPlayerDist){
+  const hw = m.def.w/2, h = m.def.h;
+  for(let k=0;k<24;k++){
+    const x = Math.floor(cx+(Math.random()*2-1)*r)+0.5, z = Math.floor(cz+(Math.random()*2-1)*r)+0.5;
+    if(!CHUNK_DATA.has(ckey(Math.floor(x)>>4, Math.floor(z)>>4))) continue;
+    if(minPlayerDist && Math.hypot(x-P.x, z-P.z) < minPlayerDist) continue;
+    for(let y=Math.floor(Math.min(Y_MAX-4, m.y+12)); y>Math.max(Y_MIN+1, m.y-24); y--){
+      if(!solid(x,y-1,z)) continue;
+      const b = getB(Math.floor(x), y, Math.floor(z));
+      if(b && FLUIDK[b]) break;                  // pas dans un fluide
+      if(mobHit(x,y,z,hw,h)) break;              // pas assez de place : on essaie une autre colonne
+      return [x,y,z];
+    }
+  }
+  return null;
+}
+const mobTpReady = m => (m.tpCool||0) <= 0;
+function mobTeleportTo(m, spot){
+  m.x = spot[0]; m.y = spot[1]; m.z = spot[2];
+  m.vx = m.vy = m.vz = 0; m.lx = m.x; m.lz = m.z; m.airPeak = null; m.tpCool = 0.6;
+  m.ai.state = 'idle'; m.ai.t = 0.5+Math.random();
+}
+function mobTeleportRandom(m){   // au hasard dans un rayon de 32 blocs
+  const sp = mobFindSpot(m, m.x, m.z, 32); if(!sp) return false;
+  mobTeleportTo(m, sp); return true;
+}
+function mobTeleportToPlayer(m){   // à 4–8 blocs du joueur
+  const sp = mobFindSpot(m, P.x, P.z, 8, 4); if(!sp) return false;
+  mobTeleportTo(m, sp); return true;
+}
 
 // ════════════════════════════════════════════════
 // PHYSIQUE (boîte alignée sur les axes, pieds au centre de la base)
@@ -197,7 +375,7 @@ function mobLOS(m){   // ligne de vue entre les yeux de la créature et ceux du 
 }
 function mobPhysics(m, dt){
   const hw = m.def.w/2, h = m.def.h, grounded = m.onGround;
-  m.onGround = false;
+  m.onGround = false; m.climbing = false;
   const bw = getB(m.x, m.y+0.3, m.z), fk = bw ? FLUIDK[bw] : 0, inW = fk > 0;   // eau ou lave : la créature flotte
   m.inWater = inW;
   if(fk === 2 && m.deadT < 0){ m.lavaT = (m.lavaT||0) + dt; if(m.lavaT >= 0.5){ m.lavaT = 0; mobDamage(m, 4, null); } }   // lave : 4 PV / 0,5 s
@@ -206,12 +384,13 @@ function mobPhysics(m, dt){
   const k = Math.min(1, dt*(grounded ? 10 : inW ? 4 : 1.5)), wf = inW ? 0.6 : 1;
   m.vx += (m.wx*wf - m.vx)*k; m.vz += (m.wz*wf - m.vz)*k;
   if(inW) m.vy += (1.4 - m.vy)*Math.min(1, dt*3);   // elle flotte
-  else m.vy = Math.max(-45, m.vy - 32*dt);
+  else { m.vy = Math.max(-45, m.vy - 32*dt); if(m.def.slowFall) m.vy = Math.max(-2.5, m.vy); }   // poulet : chute ralentie
   const bX = mobSweep(m, 0, m.vx*dt), bZ = mobSweep(m, 2, m.vz*dt);
   if(bX) m.vx = 0; if(bZ) m.vz = 0;
   m.blocked = bX || bZ;
   if(m.blocked && (m.wx || m.wz) && m.deadT<0){   // obstacle d'un bloc : on saute si la place au-dessus est libre, sinon on est coincé
-    if(grounded){
+    if(m.def.climb && !inW){ m.vy = Math.max(m.vy, 3.4); m.climbing = true; }   // araignée : escalade le mur contre lequel elle avance
+    else if(grounded){
       const l = Math.hypot(m.wx,m.wz), ex = m.wx/l*0.35, ez = m.wz/l*0.35;
       if(!mobHit(m.x+ex, m.y+1.05, m.z+ez, hw, h)) m.vy = 8.6; else m.stuck = true;
     }
@@ -219,9 +398,11 @@ function mobPhysics(m, dt){
   mobSweep(m, 1, m.vy*dt);
   // dégâts de chute (> 3 blocs), annulés dans l'eau
   if(m.onGround){
-    if(m.airPeak!==null){ const fall = m.airPeak - m.y; if(fall > 3 && !inW) mobDamage(m, Math.floor(fall-3), null); m.airPeak = null; }
+    if(m.airPeak!==null){ const fall = m.airPeak - m.y; if(fall > 3 && !inW && !m.def.slowFall) mobDamage(m, Math.floor(fall-3), null); m.airPeak = null; }
   } else if(inW) m.airPeak = null;
   else m.airPeak = (m.airPeak===null) ? m.y : Math.max(m.airPeak, m.y);
+  if(m.climbing) m.airPeak = null;   // accrochée au mur : pas de chute
+  if(m.def.teleport && fk===1 && m.deadT<0 && mobTpReady(m)) mobTeleportRandom(m);   // l'eau fait fuir l'enderman
 }
 
 // ════════════════════════════════════════════════
@@ -235,11 +416,18 @@ function mobHitPlayer(m){
     if(P.onGround && !P.fly){ P.vy = 0.1; P.onGround = false; }
   }
 }
+function mobExplode(m){   // creeper : explosion de puissance 3 (même moteur que la TNT : blocs, dégâts, recul, effets)
+  m.deadT = 2; m.gone = true; m.root.visible = false;   // deadT ≥ 0 : ignoré par les dégâts de l'explosion, retiré à la prochaine mise à jour
+  const x = m.x, y = m.y+m.def.h*0.5, z = m.z;
+  if(typeof _tntAuth==='function' && _tntAuth()) tntExplode(x, y, z, m.def.explode+1, undefined);
+  else { tntBlastLocal(x, y, z, m.def.explode+1); tntFx(x, y, z, m.def.explode+1); }
+}
+
 function mobThink(m, dt){
   const def = m.def, ai = MOB_AI[def.ai], A = m.ai;
   m.invul = Math.max(0, m.invul-dt); m.hurtT = Math.max(0, m.hurtT-dt);
   m.atkCool = Math.max(0, m.atkCool-dt); m.swingT = Math.max(0, m.swingT-dt); m.sideT = Math.max(0, m.sideT-dt);
-  m.look = false;
+  m.look = false; if(m.tpCool>0) m.tpCool -= dt;
   const dx = P.x-m.x, dz = P.z-m.z, hd = Math.hypot(dx,dz), dyp = P.y-m.y;
 
   // ── perception (profils qui chassent) ──
@@ -247,7 +435,8 @@ function mobThink(m, dt){
     A.sightT -= dt;
     if(A.sightT<=0){
       A.sightT = 0.25;
-      A.see = svOn() && hd<ai.sight && Math.abs(dyp)<12 && mobLOS(m);
+      const rng = ai.prov ? (A.memory>0 ? ai.lose : 0) : ai.sight;   // profil « neutre » : ne voit le joueur qu'une fois provoquée
+      A.see = svOn() && hd<rng && Math.abs(dyp)<12 && mobLOS(m);
       if(A.see) A.memory = ai.memory;
     }
     A.memory = Math.max(0, A.memory-dt);
@@ -277,15 +466,25 @@ function mobThink(m, dt){
   } else if(mode==='chase'){
     A.state = 'chase'; m.look = true;
     m.heading = Math.atan2(dx,dz);   // face toujours au joueur
-    if(hd > 1.0){
+    if(def.teleport){   // enderman : trop loin de sa cible depuis 1,5 s → se téléporte près d'elle
+      if(hd>16){ m.tpT = (m.tpT||0)+dt; if(m.tpT>=1.5 && mobTpReady(m)){ m.tpT = 0; if(mobTeleportToPlayer(m)) return; } }
+      else m.tpT = 0;
+    }
+    if(def.explode){   // creeper : mèche de 1,5 s à moins de 3 blocs (annulée au-delà de 7), il s'arrête pour gonfler puis explose
+      if(A.see && hd<3) m.fuse = (m.fuse||0) + dt;
+      else if(hd>7 || !A.see) m.fuse = Math.max(0, (m.fuse||0) - dt);
+      if(m.fuse >= 1.5){ mobExplode(m); return; }
+    }
+    if(hd > 1.0 && !(m.fuse>0)){
       let a = m.heading; if(m.sideT>0) a += A.side*1.0;
       dirx = Math.sin(a); dirz = Math.cos(a); spd = def.chaseSpeed;
     }
-    if(A.see && hd<=ai.reach && dyp>-1.6 && dyp<def.h+0.3 && m.atkCool<=0){   // attaque au corps à corps
+    if(!def.explode && A.see && hd<=ai.reach && dyp>-1.6 && dyp<def.h+0.3 && m.atkCool<=0){   // attaque au corps à corps
       m.atkCool = 1.0; m.swingT = 0.4;
       mobHitPlayer(m);
     }
   } else {   // roam : alternance pause / petite balade
+    if(def.explode) m.fuse = Math.max(0, (m.fuse||0) - dt);
     if(A.state==='flee' || A.state==='chase'){ A.state = 'idle'; A.t = 1+Math.random()*2; }
     if(A.state==='idle'){
       A.t -= dt;
@@ -331,6 +530,7 @@ function mobDamage(m, amount, src){
   const ai = MOB_AI[m.def.ai], A = m.ai;
   if(ai.flee){ A.panic = 4; A.threat = src ? {x:src.x, z:src.z} : null; A.fleeAng = Math.random()*Math.PI*2; A.jitT = 0; }
   if(ai.hunt && src && src.player) A.memory = ai.memory;
+  if(m.def.teleport && m.hp>0 && Math.random()<0.9 && mobTpReady(m)) mobTeleportRandom(m);   // touché : s'esquive (9 fois sur 10)
   if(m.hp<=0) mobDie(m);
   return true;
 }
@@ -394,16 +594,30 @@ function mobAnimate(m, dt){
   const dist = Math.hypot(m.x-m.lx, m.z-m.lz); m.lx = m.x; m.lz = m.z;
   const spd = dt>0 ? dist/dt : 0;
   m.swing += (Math.min(1, spd/2.2) - m.swing)*Math.min(1, dt*10);
-  m.phase += dist*(def.gait==='quad' ? 4.2 : 2.7);
+  m.phase += dist*(def.gait==='quad' ? 4.2 : def.gait==='spider' ? 2.2 : def.gait==='chicken' ? 4.5 : 2.7);
   if(def.gait==='quad'){
     const a = Math.cos(m.phase)*0.9*m.swing;   // allure diagonale
     pt.hindR.rotation.x = a; pt.frontL.rotation.x = a; pt.hindL.rotation.x = -a; pt.frontR.rotation.x = -a;
-  } else {
+  } else if(def.gait==='spider'){
+    const sw = m.swing;
+    for(const L of SPIDER_LEG_ORDER){   // marche : balayage (Y) et soulèvement (Z) déphasés par paire, comme le modèle d'origine
+      const off = [0, Math.PI, Math.PI/2, Math.PI*1.5][L.i];
+      const fy = -(Math.cos(m.phase*2+off)*0.4)*sw, fz = Math.abs(Math.sin(m.phase+off)*0.4)*sw, base = def.parts[L.name].r;
+      pt[L.name].rotation.set(0, base[1] + L.side*fy, base[2] + L.side*fz);
+    }
+  } else {   // bipède / poulet
     const a = Math.sin(m.phase)*1.2*m.swing;
     pt.rLeg.rotation.x = a; pt.lLeg.rotation.x = -a;
-    const sw = m.swingT>0 ? Math.sin((1-m.swingT/0.4)*Math.PI) : 0;   // coup : les bras s'abaissent puis remontent
-    const base = -1.5 + Math.sin(m.age*2)*0.04 + sw*0.9;
-    pt.rArm.rotation.x = base - a*0.1; pt.lArm.rotation.x = base + a*0.1;
+    if(def.gait==='chicken'){
+      const fl = m.onGround ? 0 : 0.5+0.5*Math.sin(m.age*30), z = 0.05 + fl*1.1;   // en l'air : il bat des ailes
+      pt.rWing.rotation.z = -z; pt.lWing.rotation.z = z;
+    } else if(pt.rArm){
+      if(def.arms==='raised'){
+        const sw = m.swingT>0 ? Math.sin((1-m.swingT/0.4)*Math.PI) : 0;   // coup : les bras s'abaissent puis remontent
+        const base = -1.5 + Math.sin(m.age*2)*0.04 + sw*0.9;
+        pt.rArm.rotation.x = base - a*0.1; pt.lArm.rotation.x = base + a*0.1;
+      } else { pt.rArm.rotation.x = -a*0.8; pt.lArm.rotation.x = a*0.8; }
+    }
   }
   // tête : suit le joueur quand la créature le regarde
   let ty = 0, tp = 0;
@@ -423,7 +637,14 @@ function mobAnimate(m, dt){
     m.root.rotation.z = a; m.root.position.y += Math.sin(a)*def.w*0.5;
   }
   const f = m.deadT>=0 ? 1 : (m.hurtT>0 ? m.hurtT/0.4 : 0);
-  m.mat.emissive.setRGB(0.13+0.55*f, 0.13*(1-f)+0.02, 0.13*(1-f)+0.02);
+  let er = 0.13+0.55*f, eg = 0.13*(1-f)+0.02, eb = eg;
+  if(def.explode){   // creeper : gonfle et clignote en blanc pendant que la mèche brûle
+    const p = Math.min(1, (m.fuse||0)/1.5);
+    const w = 1 + p*p*0.4 + Math.sin(p*100)*p*0.01, hh = 1 + p*p*0.1;
+    m.root.scale.set(w, hh, w);
+    if(p>0 && Math.floor((m.fuse||0)*10)%2===0){ er = eg = eb = 0.9; }
+  }
+  for(const x of m.mats) x.emissive.setRGB(er, eg, eb);
 }
 
 function updateMobs(dt){
@@ -431,7 +652,7 @@ function updateMobs(dt){
   const sub = dt>0.05 ? 2 : 1, sdt = dt/sub, far2 = MOB_FAR*MOB_FAR, vis = ((typeof S!=='undefined' && S.renderDist) || 8)*16+16;
   for(let i=MOBS.length-1;i>=0;i--){
     const m = MOBS[i], dx = P.x-m.x, dz = P.z-m.z, d2 = dx*dx+dz*dz;
-    if(d2>far2 || m.y<Y_MIN-32){ mobRemove(i); continue; }
+    if(m.gone || d2>far2 || m.y<Y_MIN-32){ mobRemove(i); continue; }
     if(!CHUNK_DATA.has(ckey(Math.floor(m.x)>>4, Math.floor(m.z)>>4))){ m.root.visible = false; continue; }   // chunk absent : la créature attend
     if(m.deadT>=0){
       m.deadT += dt;
@@ -444,4 +665,19 @@ function updateMobs(dt){
     mobAnimate(m, dt);
     m.root.visible = d2 < vis*vis;
   }
+}
+
+// ════════════════════════════════════════════════
+// ŒUFS D'APPARITION (item « <mob>_spawn_egg », couleurs : SPAWN_EGGS dans data/blocks.js)
+// ════════════════════════════════════════════════
+const isSpawnEgg = id => typeof id==='string' && id.endsWith('_spawn_egg') && !!MOB_TYPES[id.slice(0,-10)];
+// Clic droit sur un bloc : la créature apparaît sur la face visée (sur la plante visée si le bloc est remplaçable). Consomme l'œuf hors créatif.
+function useSpawnEgg(it, t){
+  const id = it.id.slice(0,-10);
+  if(MOBS.length >= MOB_MAX){ if(typeof chatErr==='function') chatErr('Too many mobs ('+MOB_MAX+' max). Use /kill @e to remove them.'); return false; }
+  const tp = !!(BLOCKS[t.bid] && BLOCKS[t.bid].plant);
+  const x = (tp ? t.bx : t.pbx)+0.5, y = tp ? t.by : t.pby, z = (tp ? t.bz : t.pbz)+0.5;
+  if(!spawnMob(id, x, y, z)) return false;
+  if(WORLD.mode!=='creative'){ it.n--; if(it.n<=0){ it.id = null; it.n = 0; } drawHotbar(); }
+  return true;
 }
