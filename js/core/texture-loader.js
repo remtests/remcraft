@@ -23,9 +23,31 @@ function toTile16(img){
   return cv;
 }
 
+// Icônes des œufs d'apparition : fond et taches = textures grises multipliées par la couleur (teinte Minecraft)
+function tintedCanvas(src, hex){
+  const cv = document.createElement('canvas'); cv.width = cv.height = 16;
+  const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false; cx.drawImage(src, 0, 0, 16, 16);
+  const d = cx.getImageData(0,0,16,16), r = parseInt(hex.slice(1,3),16)/255, g = parseInt(hex.slice(3,5),16)/255, b = parseInt(hex.slice(5,7),16)/255;
+  for(let i=0;i<d.data.length;i+=4){ d.data[i] *= r; d.data[i+1] *= g; d.data[i+2] *= b; }
+  cx.putImageData(d, 0, 0);
+  return cv;
+}
+function buildSpawnEggTextures(){
+  const base = IMGS['spawn_egg'], ov = IMGS['spawn_egg_overlay'];
+  if(!base || !ov) return;
+  for(const mob in SPAWN_EGGS){
+    const key = mob+'_spawn_egg', cv = tintedCanvas(base, SPAWN_EGGS[mob][1]), cx = cv.getContext('2d');
+    cx.drawImage(tintedCanvas(ov, SPAWN_EGGS[mob][0]), 0, 0);
+    IMGS[key] = cv;
+    const t = new THREE.CanvasTexture(cv);
+    t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.needsUpdate = true;
+    T3[key] = t;
+  }
+}
+
 function loadTextures(cb0){
   let _done = false;
-  const cb = function(){ if(_done) return; _done = true; buildFluidTextures(); cb0(); };   // fluides construits une seule fois, avant initThree()
+  const cb = function(){ if(_done) return; _done = true; buildFluidTextures(); buildSpawnEggTextures(); cb0(); };   // fluides construits une seule fois, avant initThree()
   // 1. Textures procédurales pour tous les items/outils
   buildProceduralTextures();
 
