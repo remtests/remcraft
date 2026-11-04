@@ -345,7 +345,7 @@ function cmdHelp(){
     '/time set <day|noon|night|midnight|sunrise|sunset|ticks> · /time add <ticks> · /time query <daytime|day>',
     '/weather <clear|rain|thunder> [duration]  — sets the weather (duration in ticks, or 300s / 1d) · /weather query',
     '/gamemode <survival|creative|spectator> [player]  — changes your game mode (or another player\'s, host only)',
-    '/summon <mob> [x y z]  — summons a mob (cow, zombie) at the block you look at, or at the given position (Tab: list of mobs)',
+    '/summon <mob> [x y z]  — summons a mob (cow, pig, sheep, chicken, villager, zombie, skeleton, creeper, spider, enderman) at the block you look at, or at the given position (Tab: list of mobs)',
     '/kill  — kills you · /kill @e  — removes every mob (/kill @e[type=cow] : one kind) · /heal  — restores health and hunger',
     '/tick <freeze|unfreeze|query>  — freezes the world (time, mobs, items, fluids, fire, TNT…) or unfreezes it',
     '/locate biome <biome>  — finds the nearest biome (Tab: list of biomes)',
