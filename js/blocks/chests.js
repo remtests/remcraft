@@ -101,6 +101,7 @@ function doPlace(){
   const it=hotItem();
   if(!it||it.id===null) return;
   if(it.id==='flint_and_steel'){ useLighter(t); return; }   // briquet : allume le feu
+  if(isSpawnEgg(it.id)){ useSpawnEgg(it, t); return; }      // œuf d'apparition : invoque la créature (entities/mobs.js)
 
   // Torche : item string 'torch' → place le bloc 20
   const isTorchItem = it.id === 'torch';
