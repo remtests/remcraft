@@ -227,6 +227,22 @@ const ITEMS = {
   oak_stairs:    {name:'Oak Stairs'},
 };
 
+// Œufs d'apparition : mob → [couleur des taches (overlay), couleur du fond]. Les icônes sont générées au chargement (texture-loader.js, buildSpawnEggTextures)
+// en teintant spawn_egg.png (fond) et spawn_egg_overlay.png (taches) ; le clic droit invoque la créature (entities/mobs.js, useSpawnEgg).
+const SPAWN_EGGS = {
+  chicken:  ['#FF0000', '#A1A1A1'],
+  cow:      ['#A1A1A1', '#443626'],
+  creeper:  ['#000000', '#0DA70B'],
+  enderman: ['#000000', '#161616'],
+  pig:      ['#DB635F', '#F0A5A2'],
+  sheep:    ['#FFB5B5', '#E7E7E7'],
+  skeleton: ['#494949', '#C1C1C1'],
+  spider:   ['#A80E0E', '#342D27'],
+  villager: ['#BD8B72', '#563C33'],
+  zombie:   ['#00AFFF', '#00AFAF'],
+};
+for(const mob in SPAWN_EGGS) ITEMS[mob+'_spawn_egg'] = {name: mob.charAt(0).toUpperCase()+mob.slice(1)+' Spawn Egg'};
+
 function itemName(id) {
   if(typeof id === 'number') return BLOCKS[id]?.name || '?';
   return ITEMS[id]?.name || String(id).split('_').map(w=>w.charAt(0).toUpperCase()+w.slice(1)).join(' ');
