@@ -78,26 +78,17 @@ function buildAtlas(){
   applyAtlasFiltering(true);
 }
 
-// Filtrage de l'atlas selon l'option Anti-Aliasing :
-//  OFF → pixels nets à toute distance (Nearest, sans mipmaps)
-//  ON  → mipmaps (niveau le plus proche, sans flou) + filtrage anisotrope à la minification (sols/murs en perspective) ;
-//        la magnification reste Nearest pour garder les gros pixels à courte distance
-let _atlasAF = null;
+// Filtrage de l'atlas : TOUJOURS net (Nearest, sans mipmaps), quelle que soit l'option Anti-Aliasing.
+// L'option Anti-Aliasing ne concerne que le MSAA du contexte WebGL (arêtes des blocs, cf. createRenderer).
+// Les mipmaps et le filtrage anisotrope moyennent les texels → textures floues dès qu'on s'éloigne un peu
+// ou qu'on regarde le sol en rasant ; on les désactive donc complètement.
 function applyAtlasFiltering(force){
   if(!ATLAS_TEX) return;
-  const on = !!S.antialias;
-  if(!force && on===_atlasAF) return;
-  _atlasAF = on;
+  if(!force && ATLAS_TEX.generateMipmaps===false && ATLAS_TEX.minFilter===THREE.NearestFilter) return;
   ATLAS_TEX.magFilter = THREE.NearestFilter;
-  if(on){
-    ATLAS_TEX.minFilter = THREE.NearestMipmapNearestFilter;   // mipmaps SANS interpolation (Linear* = textures floues)
-    ATLAS_TEX.generateMipmaps = true;
-    ATLAS_TEX.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
-  } else {
-    ATLAS_TEX.minFilter = THREE.NearestFilter;
-    ATLAS_TEX.generateMipmaps = false;
-    ATLAS_TEX.anisotropy = 1;
-  }
+  ATLAS_TEX.minFilter = THREE.NearestFilter;
+  ATLAS_TEX.generateMipmaps = false;
+  ATLAS_TEX.anisotropy = 1;
   ATLAS_TEX.needsUpdate = true;
 }
 
