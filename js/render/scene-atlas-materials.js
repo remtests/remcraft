@@ -80,7 +80,7 @@ function buildAtlas(){
 
 // Filtrage de l'atlas selon l'option Anti-Aliasing :
 //  OFF → pixels nets à toute distance (Nearest, sans mipmaps)
-//  ON  → mipmaps + filtrage anisotrope maximal à la minification (sols/murs en perspective, textures lointaines) ;
+//  ON  → mipmaps (niveau le plus proche, sans flou) + filtrage anisotrope à la minification (sols/murs en perspective) ;
 //        la magnification reste Nearest pour garder les gros pixels à courte distance
 let _atlasAF = null;
 function applyAtlasFiltering(force){
@@ -90,7 +90,7 @@ function applyAtlasFiltering(force){
   _atlasAF = on;
   ATLAS_TEX.magFilter = THREE.NearestFilter;
   if(on){
-    ATLAS_TEX.minFilter = THREE.LinearMipmapLinearFilter;
+    ATLAS_TEX.minFilter = THREE.NearestMipmapNearestFilter;   // mipmaps SANS interpolation (Linear* = textures floues)
     ATLAS_TEX.generateMipmaps = true;
     ATLAS_TEX.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
   } else {
@@ -147,8 +147,12 @@ function makeChunkMats(){
 }
 
 // Anti-aliasing : attribut fixé à la création du contexte WebGL → changer l'option recrée le canvas et le renderer
+// Ratio de pixels : on suit celui de l'écran (plafond 2). Un plafond plus bas (ex. 1,5 sur écran ×2) fait étirer
+// le canvas par le navigateur avec un filtre bilinéaire → tout le monde paraît flou.
+function gamePixelRatio(){ return Math.min(window.devicePixelRatio||1, 2); }
 function createRenderer(){
   const r = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:!!S.antialias, powerPreference:'high-performance'});
+  r.setPixelRatio(gamePixelRatio());
   r.setSize(innerWidth, innerHeight);
   r.setClearColor(0x87ceeb);
   r.autoClear = false;   // 2 passes : ciel (soleil/lune) puis monde
