@@ -79,10 +79,15 @@ function updateClouds(dt){
   const T = CL_W*CL_CELL;
   const n0 = Math.floor((P.x-CL_RANGE-_clD)/T), n1 = Math.floor((P.x+CL_RANGE-_clD)/T);
   const m0 = Math.floor((P.z-CL_RANGE)/T),      m1 = Math.floor((P.z+CL_RANGE)/T);
+  // Ordre de rendu : l'eau/le verre sont transparents et n'écrivent pas la profondeur. Sous la couche de nuages, ceux-ci doivent donc être
+  // dessinés AVANT (-1 : sous l'eau, le verre…, qui se mélangent alors par-dessus) ; sinon ils se peignent par-dessus l'eau comme un calque blanc.
+  // Au-dessus de la couche, les nuages sont devant tout le reste : ils passent après (5).
+  const _clRO = (camera ? camera.position.y : P.y) > CL_Y + CL_H*0.5 ? 5 : -1;
   let u = 0;
   for(let n=n0;n<=n1;n++) for(let m=m0;m<=m1;m++){
     let mesh = _clMeshes[u];
-    if(!mesh){ mesh = new THREE.Mesh(_clTile, _clMat); mesh.renderOrder = 5; scene.add(mesh); _clMeshes[u] = mesh; }
+    if(!mesh){ mesh = new THREE.Mesh(_clTile, _clMat); scene.add(mesh); _clMeshes[u] = mesh; }
+    mesh.renderOrder = _clRO;
     mesh.visible = true; mesh.position.set(n*T + _clD, CL_Y, m*T); u++;
   }
   for(;u<_clMeshes.length;u++) _clMeshes[u].visible = false;
