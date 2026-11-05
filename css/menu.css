@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
 *{margin:0;padding:0;box-sizing:border-box;}
 body{background:#000;overflow:hidden;font-family:'Courier New',monospace;}
-canvas#c{display:block;width:100vw;height:100vh;}
+canvas#c{display:block;width:100vw;height:100vh;image-rendering:pixelated;}   /* si le navigateur doit étirer le canvas : pixels nets, jamais de flou bilinéaire */
 
 /* ── OVERLAY MINECRAFT FAITHFUL ── */
 
