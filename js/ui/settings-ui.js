@@ -4,6 +4,7 @@
 // APPLICATION DES RÉGLAGES + INTERFACE
 // ════════════════════════════════════════════════
 function applySettings(){
+  applyAtlasFiltering();   // mipmaps + filtrage anisotrope liés à l'option Anti-Aliasing
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 1.5));
   renderer.setSize(innerWidth, innerHeight);
   camera.fov = S.fov; camera.aspect = innerWidth/innerHeight;
