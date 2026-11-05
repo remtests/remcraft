@@ -1,0 +1,3 @@
+portal.txt :
+
+this texture is a 160x5120 picture : it has to act like a gif, because it is a mapped texture, such as lava.
