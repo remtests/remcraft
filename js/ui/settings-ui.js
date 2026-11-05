@@ -25,6 +25,7 @@ const SETTING_DEFS = [
   {k:'brightness', label:'Brightness',           min:0,   max:1,   step:0.05, fmt:v=>v<=0?'Moody':v>=1?'Bright':Math.round(v*100)+'%'},
   {k:'fov',        label:'FOV',                   min:30,  max:110, step:1,    fmt:v=>v===70?'Normal':v+'°'},
   {k:'maxFps',     label:'Max Framerate',        type:'cycle', opts:[[30,'30 FPS'],[60,'60 FPS'],[120,'120 FPS'],[0,'Unlimited']]},
+  {k:'antialias',  label:'Anti-Aliasing',        type:'toggle', newRenderer:true},
   {k:'showDebug',  label:'Debug Info (F3)',  type:'toggle'},
 ];
 const _setUI = {};
@@ -37,6 +38,7 @@ function buildSettingsUI(){
     let ctl;
     const commit = v=>{
       S[def.k] = v; saveSettings();
+      if(def.newRenderer) rebuildRenderer();
       applySettings();
       if(def.rebuild) rebuildAllChunks();
     };
