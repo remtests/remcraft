@@ -75,10 +75,30 @@ function buildAtlas(){
   TILE_TINT.fill(0);
   for(const k in TINT_KEYS) if(TILE_IDX[k]!==undefined) TILE_TINT[TILE_IDX[k]] = TINT_KEYS[k]==='g' ? 1 : 2;   // 1 = herbe, 2 = feuillage
   ATLAS_TEX = new THREE.CanvasTexture(cv);
+  applyAtlasFiltering(true);
+}
+
+// Filtrage de l'atlas selon l'option Anti-Aliasing :
+//  OFF → pixels nets à toute distance (Nearest, sans mipmaps)
+//  ON  → mipmaps + filtrage anisotrope maximal à la minification (sols/murs en perspective, textures lointaines) ;
+//        la magnification reste Nearest pour garder les gros pixels à courte distance
+let _atlasAF = null;
+function applyAtlasFiltering(force){
+  if(!ATLAS_TEX) return;
+  const on = !!S.antialias;
+  if(!force && on===_atlasAF) return;
+  _atlasAF = on;
   ATLAS_TEX.magFilter = THREE.NearestFilter;
-  ATLAS_TEX.minFilter = THREE.NearestFilter;   // pixels nets à toute distance : pas de mipmaps, pas de filtrage linéaire
-  ATLAS_TEX.generateMipmaps = false;
-  ATLAS_TEX.anisotropy = 1;
+  if(on){
+    ATLAS_TEX.minFilter = THREE.LinearMipmapLinearFilter;
+    ATLAS_TEX.generateMipmaps = true;
+    ATLAS_TEX.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
+  } else {
+    ATLAS_TEX.minFilter = THREE.NearestFilter;
+    ATLAS_TEX.generateMipmaps = false;
+    ATLAS_TEX.anisotropy = 1;
+  }
+  ATLAS_TEX.needsUpdate = true;
 }
 
 // ── Matériaux : injection d'un éclairage précalculé (ciel + blocs + torche en main) ──
