@@ -126,11 +126,26 @@ function makeChunkMats(){
   ];
 }
 
+// Anti-aliasing : attribut fixé à la création du contexte WebGL → changer l'option recrée le canvas et le renderer
+function createRenderer(){
+  const r = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:!!S.antialias, powerPreference:'high-performance'});
+  r.setSize(innerWidth, innerHeight);
+  r.setClearColor(0x87ceeb);
+  r.autoClear = false;   // 2 passes : ciel (soleil/lune) puis monde
+  return r;
+}
+function rebuildRenderer(){
+  const old = document.getElementById('c');
+  const cv = document.createElement('canvas');
+  cv.id = old.id; cv.className = old.className; cv.style.cssText = old.style.cssText;
+  const prev = renderer;
+  old.replaceWith(cv);
+  renderer = createRenderer();   // textures et géométries sont ré-envoyées au GPU automatiquement par three.js
+  try{ prev.dispose(); prev.forceContextLoss(); }catch(e){}
+}
+
 function initThree(){
-  renderer = new THREE.WebGLRenderer({canvas:document.getElementById('c'), antialias:false, powerPreference:'high-performance'});
-  renderer.setSize(innerWidth, innerHeight);
-  renderer.setClearColor(0x87ceeb);
-  renderer.autoClear = false;   // 2 passes : ciel (soleil/lune) puis monde
+  renderer = createRenderer();
 
   scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0x87ceeb, 1e6, 1e6+1);   // brouillard désactivé (plus de teinte sur les blocs lointains)
