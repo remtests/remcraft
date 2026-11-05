@@ -41,7 +41,11 @@ addEventListener('keydown',e=>{
   if(e.code==='KeyQ' && !e.repeat && gameOn && !uiOn && !paused){ e.preventDefault(); dropHeld(e.ctrlKey); return; }   // touche « A » en AZERTY : jeter (Ctrl = toute la pile)
   if(e.code==='KeyE'){toggleUI('inv');return;}
   if(e.code==='KeyF'){swapOffhand();return;}
-  if(e.code==='Escape'){if(uiOn){closeUI();return;} paused?resume():doPause();}
+  if(e.code==='Escape'){
+    // Le navigateur peut envoyer à la fois « pointeur libéré » (→ pause) et la touche Échap : sans ce garde, la 2e annule aussitôt la 1re
+    if(e.repeat || performance.now()-_lockPauseAt < 300) return;
+    if(uiOn){closeUI();return;} paused?resume():doPause();
+  }
   if(/^Digit[1-9]$/.test(e.code)){P.hotbar=+e.code[5]-1;drawHotbar();}
 });
 addEventListener('keyup',e=>K[e.code]=false);
@@ -79,8 +83,9 @@ addEventListener('wheel',e=>{
   if(uiOn) return;
   P.hotbar=((P.hotbar+(e.deltaY>0?1:-1))+9)%9; drawHotbar();
 },{passive:true});
+let _lockPauseAt = -1e9;   // instant de la dernière pause déclenchée par la perte du verrou pointeur (Échap géré par le navigateur)
 addEventListener('pointerlockchange',()=>{
-  if(!document.pointerLockElement&&gameOn&&!uiOn&&!paused&&!SV.dead) doPause();
+  if(!document.pointerLockElement&&gameOn&&!uiOn&&!paused&&!SV.dead){ _lockPauseAt = performance.now(); doPause(); }
 });
 
 function doPause(){paused=true;if(typeof wsSave==='function')wsSave();document.exitPointerLock();document.getElementById('pause').style.display='flex';mpRefreshPause();}
