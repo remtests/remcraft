@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════
 function applySettings(){
   applyAtlasFiltering();   // mipmaps + filtrage anisotrope liés à l'option Anti-Aliasing
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1, 1.5));
+  renderer.setPixelRatio(gamePixelRatio());
   renderer.setSize(innerWidth, innerHeight);
   camera.fov = S.fov; camera.aspect = innerWidth/innerHeight;
   camera.far = CL_RANGE + 300;   // fixe : les nuages portent à 128 chunks (2048 blocs), indépendamment de la distance d'affichage
