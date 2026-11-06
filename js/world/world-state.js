@@ -27,12 +27,13 @@ function lIdx(lx,ly,lz){ return (lx*CSIZ+lz)*CHH+ly; }
 const KNOWN  = new Uint8Array(256);   // id connu
 const OPAQUE = new Uint8Array(256);   // bloc plein : cache les faces voisines et bloque la lumière
 const HMB    = new Uint8Array(256);   // bloque la lumière du ciel pour la heightmap (opaque ou feuilles)
-const BCLS   = new Uint8Array(256);   // classe de mesh : 0 solide, 1 cutout, 2 verre, 3 eau, 4 lave
+const BCLS   = new Uint8Array(256);   // classe de mesh : 0 solide, 1 cutout, 2 verre, 3 eau, 4 lave, 5 portail du Nether
 const PLANT  = new Uint8Array(256);   // modèles en croix (herbe haute, fleurs, stalactites)
 const DRIP   = new Uint8Array(256);   // stalactites / stalagmites (modèle en croix retourné s'il pend du plafond)
 const AXIS   = new Uint8Array(256);   // bûches horizontales : 1 = axe X, 2 = axe Z
 const HASFRONT = new Uint8Array(256); // blocs orientés avec une face avant (coffre, four)
 const FLUIDK = new Uint8Array(256);   // fluides : 0 = aucun, 1 = eau, 2 = lave (voir blocks/fluids.js)
+const ISPORTAL = new Uint8Array(256); // portail du Nether (modèle de 2 plans fins, texture animée : render/portal-render.js)
 const EMIT   = new Uint8Array(256);   // niveau de lumière émis par le bloc (torche 14, lave 15) : alimente LIGHTSRC
 for(const id in BLOCKS){
   const bd = BLOCKS[id], t = bd.tTop;
@@ -44,10 +45,11 @@ for(const id in BLOCKS){
   HASFRONT[id] = bd.tFront ? 1 : 0;
   FLUIDK[id] = bd.fluid==='water' ? 1 : bd.fluid==='lava' ? 2 : 0;
   EMIT[id] = bd.emit || 0;
-  const transp = (isLeaf||isGlass||t==='torch_block'||t==='water'||isCross||FLUIDK[id]>0);
+  ISPORTAL[id] = bd.portal ? 1 : 0;
+  const transp = (isLeaf||isGlass||t==='torch_block'||t==='water'||isCross||FLUIDK[id]>0||ISPORTAL[id]>0);
   OPAQUE[id] = transp ? 0 : 1;
   HMB[id]    = (OPAQUE[id] || isLeaf) ? 1 : 0;
-  BCLS[id]   = FLUIDK[id]===2 ? 4 : FLUIDK[id]===1 ? 3 : isGlass ? 2 : (isLeaf||t==='torch_block'||isCross) ? 1 : 0;
+  BCLS[id]   = ISPORTAL[id] ? 5 : FLUIDK[id]===2 ? 4 : FLUIDK[id]===1 ? 3 : isGlass ? 2 : (isLeaf||t==='torch_block'||isCross) ? 1 : 0;
 }
 EMIT[20] = 14;   // torche
 OPAQUE[27] = 0; HMB[27] = 1;   // coffre : bloc non plein (14×14×14) → les voisins gardent leurs faces, mais il bloque toujours le ciel
