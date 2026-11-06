@@ -235,6 +235,7 @@ function updateFire(dt){
 
 // Briquet : allume la cellule contre la face visée (ou remplace l'herbe visée)
 function useLighter(t){
+  if(!FIRE_BURN[t.bid] && !FIRE_PLANT[t.bid] && lightPortalAt(t.pbx, t.pby, t.pbz)) return;   // cadre d'obsidienne complet : le portail s'allume à la place du feu (blocks/nether-portal.js)
   if(FIRE_BURN[t.bid]){ const bf = igniteBlock(t.bx,t.by,t.bz,t.bid); if(bf) bf.life += 1; return; }   // bloc inflammable : il brûle lui-même
   const tp = !!FIRE_PLANT[t.bid];
   const f = igniteAt(tp?t.bx:t.pbx, tp?t.by:t.pby, tp?t.bz:t.pbz, 0);
