@@ -27,7 +27,7 @@ const FLUID_FLOW_PUSH = 0.011;    // vitesse (blocs / pas physique de 1/60 s) aj
 
 const fB = (x,y,z) => y < Y_MIN ? 10 : getB(x,y,z);                       // sous le monde : comme de la bedrock (le fluide ne s'écoule pas dans le vide)
 const fAmt = s => (s & 8) ? 8 : 8 - (s & 7);                              // quantité A d'un état
-const fRepl = b => !!(BLOCKS[b] && BLOCKS[b].noCollide && !BLOCKS[b].isFluid);   // plantes, torche, stalactites… : remplacés (et lâchés) par un fluide
+const fRepl = b => !!(BLOCKS[b] && BLOCKS[b].noCollide && !BLOCKS[b].isFluid && !BLOCKS[b].portal);   // plantes, torche, stalactites… : remplacés (et lâchés) par un fluide
 const fSolidSrc = b => !!(b && BLOCKS[b] && !BLOCKS[b].noCollide);        // « bloc plein » pour créer une source infinie
 
 // ── Planificateur : file de ticks par date d'échéance (clé numérique x,y,z → plus de chaînes) ──
