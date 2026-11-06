@@ -114,7 +114,7 @@ function patchShader(shader){
       'reflectedLight.indirectDiffuse = bakedL;\n' +
       '#include <aomap_fragment>');
 }
-let CMATS = null;   // [solide, cutout, verre, eau, lave]
+let CMATS = null;   // [solide, cutout, verre, eau, lave, portail]
 function makeChunkMats(){
   // Matériau "basic" : aucun calcul de lumière dynamique, tout est précalculé dans les sommets (comme Minecraft)
   const mk = (opts) => {
@@ -134,6 +134,8 @@ function makeChunkMats(){
     // Fluides : texture dédiée animée (FLUID_TEX, cf. render/fluid-render.js). L'eau garde l'alpha de sa texture (180/255) ; la lave est opaque
     mkF({transparent:true, side:THREE.DoubleSide, depthWrite:false}),
     mkF({}),
+    // Portail du Nether : texture dédiée animée (PORTAL_TEX, cf. render/portal-render.js), alpha de la texture, double face. Sans éclairage précalculé : le portail brille, sa couleur reste celle de la texture (jour comme nuit)
+    new THREE.MeshBasicMaterial({map:PORTAL_TEX, transparent:true, side:THREE.DoubleSide, depthWrite:false}),
   ];
 }
 
