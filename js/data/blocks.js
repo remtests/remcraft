@@ -143,6 +143,11 @@ _all('obsidian', 'Obsidian', 'obsidian', {hard:50, mat:'stone', needsPick:2, nee
 // le rendu réel des fluides (animation, hauteur, courant) est fait par le mesher avec la texture dédiée FLUID_TEX.
 addBlock('lava', 'Lava', 'lava', 'lava', 'lava', {hard:100, drop:null, noCollide:true, isFluid:true, fluid:'lava', emit:15});
 
+// Portail du Nether (cadre d'obsidienne allumé au briquet, cf. blocks/nether-portal.js) : on le traverse, il éclaire (niveau 11), il n'est ni cassable ni ciblable.
+// États : axis (data/block-states.js). Rendu : classe de mesh 5, texture animée dédiée (render/portal-render.js) → les tuiles ci-dessous ne servent jamais.
+// Introuvable dans le créatif (noCreative) ; se pose avec /setblock x y z nether_portal[axis=z]. Ajouté EN DERNIER : les ids des mondes existants ne bougent pas.
+addBlock('nether_portal', 'Nether Portal', 'stone', 'stone', 'stone', {hard:999, drop:null, noCollide:true, portal:true, emit:11, noCreative:true});
+
 // id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
 const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;
 BS.attachAll();   // rattache les schémas d'états (data/block-states.js) aux blocs qui existent maintenant
