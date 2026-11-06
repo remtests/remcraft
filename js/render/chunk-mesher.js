@@ -160,7 +160,7 @@ function buildChunkMesh(cx,cz){
   floodLight(LB);
 
   // 4) géométrie
-  const bk = [mkBucket(), mkBucket(), mkBucket(), mkBucket(), mkBucket()];   // solide, cutout, verre, eau, lave
+  const bk = [mkBucket(), mkBucket(), mkBucket(), mkBucket(), mkBucket(), mkBucket()];   // solide, cutout, verre, eau, lave, portail
   // Éclairage doux (Minecraft) : 0 = désactivé (lumière plate par face), 1 = minimum, 2 = maximum
   const useSmooth = S.smooth > 0, useAO = useSmooth, aoStep = S.smooth === 1 ? 0.07 : 0.14;
   for(let lx=0;lx<CSIZ;lx++) for(let lz=0;lz<CSIZ;lz++){
@@ -212,6 +212,7 @@ function buildChunkMesh(cx,cz){
       }
 
       if(FLUIDK[bid]){ meshFluid(bid, ri, wx, wy, wz, bk); continue; }   // eau / lave : hauteur des coins, courant, texture animée (render/fluid-render.js)
+      if(ISPORTAL[bid]){ meshPortal(ri, wx, wy, wz, bk); continue; }     // portail du Nether : 2 plans fins selon l'état axis (render/portal-render.js)
 
       if(PLANT[bid]){   // plante en croix (2 plans diagonaux, double face)
         const b = bk[1], tile = TILE_SIDE[bid], tu = TILE_U0[tile], tv = TILE_V0[tile];
@@ -325,7 +326,7 @@ function buildChunkMesh(cx,cz){
 
   // 5) création des meshes (puis libération des anciens : pas de clignotement)
   const meshes = [];
-  for(let cls=0; cls<5; cls++){
+  for(let cls=0; cls<6; cls++){
     const b = bk[cls];
     if(!b.n) continue;
     const nv = b.n*4;
