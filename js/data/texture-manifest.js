@@ -145,6 +145,12 @@ const FLUID_TEX_DATA = {
   "water_overlay": "assets/textures/fluids/water_overlay.png",
 };
 
+// Portail du Nether : feuille d'animation (images carrées empilées verticalement, 32 images). Taille d'une image = largeur de la feuille (16, 160…) : le code s'adapte.
+// Attention : le nom du fichier contient des « % » littéraux (« %28 »), qu'une URL doit donc écrire « %2528 » (sinon le serveur décode « ( » et renvoie 404).
+const PORTAL_TEX_DATA = {
+  "nether_portal": "assets/textures/nether/portal/Nether_Portal_%2528texture%2529_JE1_BE1.webp",
+};
+
 const SKY_TEX_DATA = {sun: "assets/textures/environment/sun.png", moon: "assets/textures/environment/moon.png"};
 const ITEM_TEX_DATA = {
   "wooden_pickaxe": "assets/textures/items/wooden_pickaxe.png",
