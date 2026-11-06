@@ -241,3 +241,9 @@ function bsNorm(id, s){ return (HASSTATE[id] && s) ? BS.clean(id, s) : 0; }
 // Un fluide est une SOURCE quand son état vaut exactement 0.
 BS.define('water', {level:[7,6,5,4,3,2,1,0], falling:'bool'});
 BS.define('lava',  {level:[7,6,5,4,3,2,1,0], falling:'bool'});
+
+// ════════════════════════════════════════════════
+// PORTAIL DU NETHER — voir blocks/nether-portal.js (activation, cadre) et render/portal-render.js (rendu)
+// ════════════════════════════════════════════════
+// axis : plan du portail. 'x' (défaut, état 0) = plan XY, fin selon Z (on le traverse du nord au sud) ; 'z' = plan ZY, fin selon X (on le traverse d'est en ouest)
+BS.define('nether_portal', {axis:['x','z']});
