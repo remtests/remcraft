@@ -39,6 +39,7 @@ function loop(ts){
     updateFluids(dt);
   }
   updateFluidVisuals();
+  updatePortalTexture(performance.now());
   if(!worldFrozen) updateCactus();
   updateVisibleChunks();
   processChunkQueue();
