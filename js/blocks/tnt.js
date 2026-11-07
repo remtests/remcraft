@@ -17,8 +17,8 @@ const TNT_POWER = 4;
 const TNT_DT = 1/20;          // un tick
 const TNT_MAX = 512;          // entités amorcées simultanées (au-delà, les TNT d'une réaction en chaîne restent en place)
 const TNT_HW = 0.49, TNT_H = 0.98;   // boîte de collision de l'entité
-const TNTS = [];
-const TNT_LAVAQ = [];         // blocs TNT collés à de la lave : [x, y, z, délai restant (s)]
+let TNTS = [];
+let TNT_LAVAQ = [];         // blocs TNT collés à de la lave : [x, y, z, délai restant (s)]
 let _tntAcc = 0, _tntSeq = 0, _tntSyncT = 0;
 SV_CAUSE.explosion = 'blew up';   // message de mort (survival.js)
 

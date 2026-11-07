@@ -42,6 +42,7 @@ function mpMakeRemote(p){
 function mpUpdateRemote(p, dt){
   const d = p.rp; if(!d) return;
   const r = p.rm || (p.rm = mpMakeRemote(p));
+  r.root.visible = r.tag.visible = (d.dm || 'overworld') === CUR_DIM;   // joueur d'une autre dimension : invisible
   if(!r.init){ r.x = d.x; r.y = d.y; r.z = d.z; r.by = d.yaw; r.init = true; }
   const k = Math.min(1, dt*14), ox = r.x, oz = r.z;
   r.x += (d.x-r.x)*k; r.y += (d.y-r.y)*k; r.z += (d.z-r.z)*k;
@@ -87,7 +88,7 @@ function mpTick(dt){
   for(const p of MP.players.values()) mpUpdateRemote(p, dt);
   // lumière dynamique : un joueur distant qui tient une torche éclaire le décor autour de lui (comme la nôtre)
   const U = LIGHT_UNI.uFire.value; let k = 6;
-  for(const p of MP.players.values()){ const r = p.rm; if(k<U.length && r && p.rp && p.rp.l) U[k++].set(r.x, r.y+1.3, r.z, 13); }
+  for(const p of MP.players.values()){ const r = p.rm; if(k<U.length && r && p.rp && p.rp.l && (p.rp.dm||'overworld') === CUR_DIM) U[k++].set(r.x, r.y+1.3, r.z, 13); }
   while(k<U.length) U[k++].set(0, -9999, 0, 0);
 }
 function mpClearLights(){ const U = LIGHT_UNI.uFire.value; for(let k=6;k<U.length;k++) U[k].set(0, -9999, 0, 0); }

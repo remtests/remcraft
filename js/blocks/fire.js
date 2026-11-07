@@ -8,9 +8,9 @@
 const FIRE_SPRITE = "assets/textures/effects/fire.webp";
 const FIRE_FRAMES = 32, FIRE_FPS = 24, MAX_FIRE = 800, FIRE_TICK = 0.25, FIRE_GMAX = 3, FIRE_MAXLIT = 120;   // FIRE_MAXLIT : feux à lumière précalculée dans les chunks
 const FIRE_SPREAD = 0.35;   // vitesse de propagation vers de nouvelles cases (saut de proche en proche + herbe) : 1 = ancienne vitesse, plus petit = plus lent
-const FIRES = new Map(), FIRE_LIST = [];
+let FIRES = new Map(), FIRE_LIST = [];
 let _fMesh = null, _fPos, _fUv, _fTex = null, _fAcc = 0, _fTime = 0, _fLit = 0, _fLT = 0;
-const _fLQ = [];   // relances d'éclairage (étalées dans le temps pour ne pas saccader)
+let _fLQ = [];   // relances d'éclairage (étalées dans le temps pour ne pas saccader)
 // probabilité par seconde qu'un bloc voisin d'un feu soit consumé
 const FIRE_BURN  = {6:0.07, 5:0.015, 28:0.015, 29:0.015, 7:0.025, 11:0.025, 17:0.04, 27:0.025};   // feuilles, bûche, planches, établi, bibliothèque, coffre
 for(const _id in BLOCKS){ const _b = BLOCKS[_id]; if(_b.burn && !FIRE_BURN[_id]) FIRE_BURN[_id] = _b.burn; }   // planches, bûches et feuilles des autres bois

@@ -22,6 +22,7 @@ function loop(ts){
     while(acc >= STEP && n < 5){ if(!SV.dead) physStep(); acc -= STEP; n++; }
     if(n === 5) acc = 0;
     svUpdate(dt);   // survie : faim, régénération, dégâts, noyade…
+    updatePortalTravel(dt);   // portail du Nether : attente dans le portail puis téléportation (blocks/nether-portal.js)
   }
 
   if(!worldFrozen) updateWeather(dt);   // avant updDay : le ciel dépend du niveau de pluie / d'orage
@@ -74,7 +75,7 @@ function loop(ts){
       const inf = renderer.info.render;
       dbg.innerHTML=
         `${_fpsVal} FPS · draw calls: ${inf.calls} · triangles: ${(inf.triangles/1000).toFixed(0)}k · chunks: ${CHUNK_MESH.size}<br>`+
-        `XYZ: ${P.x.toFixed(1)} / ${P.y.toFixed(1)} / ${P.z.toFixed(1)} | Yaw: ${(P.yaw*180/Math.PI%360).toFixed(0)}° Pitch: ${(P.pitch*180/Math.PI).toFixed(0)}°<br>`+
+        `XYZ: ${P.x.toFixed(1)} / ${P.y.toFixed(1)} / ${P.z.toFixed(1)} (${CUR_DIM}) | Yaw: ${(P.yaw*180/Math.PI%360).toFixed(0)}° Pitch: ${(P.pitch*180/Math.PI).toFixed(0)}°<br>`+
         `On ground: ${P.onGround} | Biome: ${biomeNames[_ct]} | Target: ${t&&BLOCKS[t.bid]?BLOCKS[t.bid].name:'—'}<br>`+
         `Seed: ${WORLD_SEED} | 🕯️ Torches: ${LIGHTSRC.size} | queue: ${dirty.size} | ${(dayT*24).toFixed(1)}h`;
     }

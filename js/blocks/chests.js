@@ -3,8 +3,8 @@
 // ════════════════════════════════════════════════
 // COFFRES : 27 emplacements par coffre, orientation mémorisée à la pose
 // ════════════════════════════════════════════════
-const CHESTS = new Map();      // "x,y,z" → 27 emplacements {id,n}
-const CHEST_DIR = new Map();   // "x,y,z" → index dans FACE_DIRS (côté de la face avant)
+let CHESTS = new Map();      // "x,y,z" → 27 emplacements {id,n}
+let CHEST_DIR = new Map();   // "x,y,z" → index dans FACE_DIRS (côté de la face avant)
 let CHEST_CUR = null;          // clé du coffre ouvert
 function chestSlots(k){
   let a = CHESTS.get(k);

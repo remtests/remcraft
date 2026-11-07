@@ -62,6 +62,7 @@ function _buildCloudTile(){
 
 function updateClouds(dt){
   if(!CL_MAP || !scene) return;
+  if(inNether()){ for(const m of _clMeshes) m.visible = false; return; }   // pas de nuages dans le Nether
   if(!_clTile){
     _clTile = _buildCloudTile();
     _clMat = new THREE.MeshBasicMaterial({vertexColors:true, transparent:true, opacity:0.85, depthWrite:false, fog:false, toneMapped:false});
@@ -120,12 +121,12 @@ function updateSkyBodies(){
   if(sunObj){
     sunObj.m.position.copy(camera.position).addScaledVector(_sd,SKY_D);
     _orientSky(sunObj.m,_sd);
-    sunObj.m.visible=_sd.y>-0.25;
+    sunObj.m.visible=_sd.y>-0.25 && !inNether();
   }
   if(moonObj){
     moonObj.m.position.copy(camera.position).addScaledVector(_sd,-SKY_D);
     _skN.copy(_sd).negate(); _orientSky(moonObj.m,_skN);   // la lune est à l'opposé du soleil
     moonObj.m.quaternion.multiply(_skRoll.setFromAxisAngle(_skZ,MOON_ROLL));   // quart de tour autour de la normale de la plaque (axe z local)
-    moonObj.m.visible=_sd.y<0.25;
+    moonObj.m.visible=_sd.y<0.25 && !inNether();
   }
 }

@@ -54,7 +54,7 @@ function wxColTop(x, z){   // plan de surface (y monde) de la colonne : le haut 
 }
 // Précipitation reçue en un point (0 = à l'abri, sans pluie, ou biome sec)
 function wxPrecipAt(px, py, pz){
-  if(WX.rain < 0.2) return 0;
+  if(WX.rain < 0.2 || inNether()) return 0;   // pas de pluie dans le Nether
   const x = Math.floor(px), z = Math.floor(pz), top = wxColTop(x,z);
   if(top === null || py + 1 < top) return 0;
   return wxPrecip(x, z, top);
@@ -114,7 +114,7 @@ function _wxRebuild(){
 function _wxUpdateVisual(dt){
   if(!scene || !camera) return;
   if(!_wxLayers) _wxLayers = {rain:_wxMakeLayer(WX_RAIN_PNG, 3.6, 0), snow:_wxMakeLayer(WX_SNOW_PNG, 0.5, 0.04)};
-  const on = WX.rain > 0.01;
+  const on = WX.rain > 0.01 && !inNether();
   _wxLayers.rain.mesh.visible = _wxLayers.snow.mesh.visible = on;
   if(!on){ _wxKey = ''; return; }
   _wxRebT += dt; _wxT += dt;

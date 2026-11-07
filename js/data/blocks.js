@@ -147,6 +147,7 @@ addBlock('lava', 'Lava', 'lava', 'lava', 'lava', {hard:100, drop:null, noCollide
 // États : axis (data/block-states.js). Rendu : classe de mesh 5, texture animée dédiée (render/portal-render.js) → les tuiles ci-dessous ne servent jamais.
 // Introuvable dans le créatif (noCreative) ; se pose avec /setblock x y z nether_portal[axis=z]. Ajouté EN DERNIER : les ids des mondes existants ne bougent pas.
 addBlock('nether_portal', 'Nether Portal', 'stone', 'stone', 'stone', {hard:999, drop:null, noCollide:true, portal:true, emit:11, noCreative:true});
+_all('netherrack', 'Netherrack', 'netherrack', {hard:1, mat:'stone', needsPick:1});   // sol du Nether (génération provisoire : chunk-generation.js)
 
 // id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
 const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;

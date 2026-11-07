@@ -33,7 +33,7 @@ const fSolidSrc = b => !!(b && BLOCKS[b] && !BLOCKS[b].noCollide);        // « 
 // ── Planificateur : file de ticks par date d'échéance (clé numérique x,y,z → plus de chaînes) ──
 const FK_OFF = 1 << 21;
 let FTICK = 0, fAcc = 0;
-const FBUCKETS = new Map(), FDUE = new Map();
+let FBUCKETS = new Map(), FDUE = new Map();
 const fKey = (x,y,z) => ((x+FK_OFF)*4194304 + (z+FK_OFF))*256 + (y+Y_OFF);
 function fUnkey(k){ const y = k % 256 - Y_OFF; k = Math.floor(k/256); const z = k % 4194304 - FK_OFF, x = Math.floor(k/4194304) - FK_OFF; return [x,y,z]; }
 function fSchedKey(key, delay){
