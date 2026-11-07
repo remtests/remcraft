@@ -109,6 +109,7 @@ function svRespawn(){
   if(!SV.dead) return;
   SV.dead = false; svResetStats();
   for(const k in K) K[k] = false;
+  if(CUR_DIM !== 'overworld') dimSwitch('overworld');   // le point de réapparition est dans l'Overworld
   const sp = SV.spawn || {x:P.x, z:P.z}, bm = getBiomeData(Math.floor(sp.x), Math.floor(sp.z));
   P.x = sp.x; P.z = sp.z; P.y = bm.h + 3;
   const safe = findSafeSpawn(Math.floor(sp.x), Math.floor(sp.z), 8);   // pas dans un arbre ni une construction

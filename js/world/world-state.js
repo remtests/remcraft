@@ -8,14 +8,20 @@ const CHH  = 180;         // hauteur chunk = 180 blocs (−90 .. +89)
 const Y_OFF = 90;         // local_y = world_y + Y_OFF
 const Y_MIN = -60;        // plancher du monde = couche de bedrock
 const Y_MAX =  89;
+// ── DIMENSIONS ── (voir js/world/dimensions.js)
+// Chaque dimension a ses propres chunks, lumières, coffres, fours, feux, fluides… : tout l'état « du monde » est échangé par dimBind().
+// CUR_DIM : dimension liée (celle du joueur, ou celle d'un withDim() en cours). Les coordonnées sont celles de la dimension.
+let CUR_DIM = 'overworld';                              // 'overworld' | 'nether'
+const NETHER_FLOOR_Y = 32;                              // y monde de l'unique couche de netherrack (génération provisoire)
+const inNether = () => CUR_DIM === 'nether';
 const BED_LY = Y_MIN + Y_OFF;   // index local de la couche de bedrock (y = -60) ; en dessous : rien n'est généré
 
 // Données : Uint8Array(16*16*180), layout par COLONNE : (lx*16+lz)*CHH + ly (colonnes contiguës → copie rapide)
-const CHUNK_DATA = new Map();
+let CHUNK_DATA = new Map();
 // Méta par chunk : hauteurs (bloc le plus haut / le plus haut qui bloque la lumière) + flag "modifié par le joueur"
-const CHUNK_META = new Map();
+let CHUNK_META = new Map();
 // Sources de lumière posées par le joueur (torches) — évite tout scan 3D
-const LIGHTSRC = new Map();
+let LIGHTSRC = new Map();
 
 const ckey = (cx,cz) => (cx+32768)*65536 + (cz+32768);   // clé numérique (plus de strings)
 const cKey = ckey;
@@ -89,7 +95,7 @@ const MP = {peer:null, role:null, pid:null, code:null, hostConn:null, conns:new 
             open:false, applying:false, fireApply:false, started:false, spawn:null,
             edits:new Map(), eq:[], pseq:0, dseq:0, chestSig:new Map(), chestKey:null, chestT:0, lastSend:0, tmT:0, armT:0, armSig:'',
             name:mpLoadName()};
-const CACT_Q = [];   // cactus à vérifier (support) : alimentée par setB, traitée par updateCactus
+let CACT_Q = [];   // cactus à vérifier (support) : alimentée par setB, traitée par updateCactus
 let _hmChanged = false;
 
 // Observateurs de modifications (redstone, portes… : « un voisin a changé »). Appelés par setB APRÈS l'écriture, avec

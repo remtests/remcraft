@@ -52,12 +52,19 @@ function wsSave(){
   if(!WS.cur || !gameOn || MP.role==='client' || SV.dead) return false;
   const idx = wsReadIndex(), m = idx.find(w => w.id===WS.cur);
   if(!m) return false;   // monde supprimé entre-temps
-  const flat = [], withDir = [];   // withDir : entrées à plus de 4 champs (orientation de coffre, état de bloc)
-  for(const e of MP.edits.values()){ if(e.length>4) withDir.push(e); else flat.push(e[0], e[1], e[2], e[3]); }
-  const chests = []; for(const [k,s] of CHESTS) if(s.some(x => x.id!==null)) chests.push([k, s.map(x => [x.id, x.n])]);
-  const fu = []; for(const k of FURNACES.keys()) fu.push(mpFurnaceMsg(k, true));
+  // Contenu d'une dimension : journal des blocs modifiés, orientations, coffres, fours. Les coordonnées sont celles de la dimension,
+  // qui est la clé : Overworld = champs de premier niveau (anciennes sauvegardes inchangées), Nether = st.nether.
+  const pack = () => {
+    const flat = [], withDir = [];   // withDir : entrées à plus de 4 champs (orientation de coffre, état de bloc)
+    for(const e of MP.edits.values()){ if(e.length>4) withDir.push(e); else flat.push(e[0], e[1], e[2], e[3]); }
+    const chests = []; for(const [k,s] of CHESTS) if(s.some(x => x.id!==null)) chests.push([k, s.map(x => [x.id, x.n])]);
+    const fu = []; for(const k of FURNACES.keys()) fu.push(mpFurnaceMsg(k, true));
+    return {e:flat, ed:withDir, cd:[...CHEST_DIR], chests, fu};
+  };
+  const ow = withDim('overworld', pack), nt = withDim('nether', pack);
   const st = {
-    v:1, e:flat, ed:withDir, cd:[...CHEST_DIR], chests, fu, dayT, dc:dayCount,
+    v:1, e:ow.e, ed:ow.ed, cd:ow.cd, chests:ow.chests, fu:ow.fu, dim:CUR_DIM,   // dim : dimension du joueur (p = sa position dans cette dimension)
+    ...((nt.e.length || nt.ed.length || nt.chests.length || nt.fu.length || nt.cd.length) ? {nether:nt} : {}), dayT, dc:dayCount,
     mode:WORLD.mode, base:WORLD.baseMode||WORLD.mode,
     p:{x:P.x, y:P.y, z:P.z, yaw:P.yaw, pitch:P.pitch, hot:P.hotbar, fly:!!P.fly,
        inv:P.inv.map(s => ({...s})), off:{...P.offhand}, arm:P.armor.map(s => ({...s}))},
@@ -120,6 +127,30 @@ async function wsApplyPending(prog){
     }
   }
   for(const f of (Array.isArray(st.fu) ? st.fu : [])) mpSetFurnace(f);
+  // Nether : même contenu, appliqué dans sa dimension (sans pause d'affichage : il est bien plus petit)
+  if(st.nether && typeof st.nether === 'object') withDim('nether', () => wsApplySection(st.nether));
+  if(st.dim === 'nether') dimSwitch('nether');   // le joueur s'était arrêté dans le Nether : les chunks de départ sont ceux du Nether
+}
+
+// Applique une section de sauvegarde (journal, orientations, coffres, fours) à la dimension liée — version sans attente
+function wsApplySection(sec){
+  for(const [k,d] of (Array.isArray(sec.cd) ? sec.cd : [])) if(wsKeyOk(k)) CHEST_DIR.set(k, d|0);
+  const list = [], e = Array.isArray(sec.e) ? sec.e : [];
+  for(let i=0;i+3<e.length;i+=4) list.push([e[i], e[i+1], e[i+2], e[i+3]]);
+  for(const x of (Array.isArray(sec.ed) ? sec.ed : [])) if(Array.isArray(x)) list.push(x);
+  for(const a of list){
+    const [x,y,z,v] = a;
+    if(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(z) && Number.isInteger(v) && (v===0 || BLOCKS[v])) setB(x, y, z, v, a[5]);
+  }
+  for(const [k,s] of (Array.isArray(sec.chests) ? sec.chests : [])){
+    if(!wsKeyOk(k) || !Array.isArray(s)) continue;
+    const slots = chestSlots(k);
+    for(let i=0;i<27;i++){
+      const a = s[i], n = a ? Math.max(0, Math.min(64, a[1]|0)) : 0;
+      slots[i].n = n; slots[i].id = n>0 ? a[0] : null;
+    }
+  }
+  for(const f of (Array.isArray(sec.fu) ? sec.fu : [])) mpSetFurnace(f);
 }
 
 // Une fois le jeu démarré : joueur, inventaire, heure

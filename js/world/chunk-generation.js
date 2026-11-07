@@ -192,12 +192,20 @@ function lavaLevelAt(wx, wz){
 
 function dirtDepthOf(type, h){ return (type===2 && h>38) || (type===9 && h>42) ? 1 : (type===10 ? 10 : (type===3 ? 7 : 4)); }   // désert : 2 sable + 5 grès ; badlands : 10 strates
 
+const NETHERRACK_ID = BID('netherrack');
 function generateChunk(cx,cz){
   const data = new Uint8Array(CSIZ*CSIZ*CHH);
   const meta = {hmL:new Uint8Array(256), top:new Uint8Array(256), bio:new Uint8Array(256), edited:false, st:null};   // st : états de blocs (Uint16Array, alloué à la demande — voir setB)
   const key = ckey(cx,cz);
   CHUNK_DATA.set(key,data); CHUNK_META.set(key,meta);
   const SD = WORLD_SEED, x0 = cx*CSIZ, z0 = cz*CSIZ;
+
+  if(CUR_DIM === 'nether'){   // Nether (provisoire) : une seule couche de netherrack, rien au-dessus ni en dessous (vide)
+    const nf = NETHER_FLOOR_Y + Y_OFF;
+    for(let col=0;col<256;col++){ data[col*CHH+nf] = NETHERRACK_ID; meta.bio[col] = 0; }
+    for(let col=0;col<256;col++) recomputeColumn(data,meta,col);
+    return data;
+  }
 
   if(WORLD.type==='flat'){   // Superflat : bedrock, 2 × terre, 1 × herbe — ni arbres ni grottes
     const s0 = FLAT_H + Y_OFF;

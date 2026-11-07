@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════
 // WORLD-SPACE ITEM DROPS (géométries et matériaux PARTAGÉS : plus de fuite mémoire)
 // ════════════════════════════════════════════════
-const drops=[];
+let drops=[];
 const DROP_SIZE=0.375;   // 0.25 × 1.5
 const DROP_FLAT_DEPTH=2;   // épaisseur des items extrudés, en « pixels » de texture (16 px = toute la largeur)
 const MAX_DROPS=160, DROP_LIFETIME=300;

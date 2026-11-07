@@ -80,7 +80,7 @@ function mpBroadcast(m, exceptPid){   // hôte → tous les clients prêts (sauf
   for(const c of MP.conns.values()) if(c.ready && c.pid!==exceptPid && c.conn.open){ try{ c.conn.send(m); }catch(e){} }
 }
 function mpOut(m){   // message de jeu sortant : l'hôte diffuse, un client écrit à l'hôte (qui retransmet)
-  m.f = MP.pid;
+  m.f = MP.pid; m.dm = CUR_DIM;   // dm : dimension à laquelle le message se rapporte (ses coordonnées sont celles de cette dimension)
   if(MP.role==='host') mpBroadcast(m, null);
   else if(MP.hostConn && MP.hostConn.open){ try{ MP.hostConn.send(m); }catch(e){} }
 }
@@ -99,9 +99,9 @@ function mpHostRecv(c, m){
       if(gameOn) mpHelloTo(c);
     } else mpBroadcast({t:'id', f:c.pid, n:p.name, u:p.skin}, c.pid);
   }
-  else if(m.t==='fi') mpFireReq(m);
-  else if(m.t==='fx') removeFireAt(m.x|0, m.y|0, m.z|0);
-  else if(m.t==='ti') mpTntReq(m);   // un client allume une TNT : l'hôte la simule
+  else if(m.t==='fi') withDim(m.dm || 'overworld', () => mpFireReq(m));
+  else if(m.t==='fx') withDim(m.dm || 'overworld', () => removeFireAt(m.x|0, m.y|0, m.z|0));
+  else if(m.t==='ti'){ if((m.dm || 'overworld') === CUR_DIM) mpTntReq(m); }   // un client allume une TNT : l'hôte la simule (TNT = entité de la dimension du joueur)
   else if(MP_RELAY.has(m.t)){ mpRecvGame(m); mpBroadcast(m, c.pid); }
 }
 
@@ -143,20 +143,25 @@ function mpClientRecv(m){
     case 'tm': dayT = +m.d; dayCount = m.c|0; break;
     case 'wx': wxApplyNet(m, false); break;
     case 'lg': wxStrike(+m.x||0, +m.y||0, +m.z||0, true); break;
-    case 'fi': mpApplyFires([[m.x|0, m.y|0, m.z|0, m.g|0, m.b|0]]); break;
-    case 'fx': MP.fireApply = true; try{ removeFireAt(m.x|0, m.y|0, m.z|0); }finally{ MP.fireApply = false; } break;
+    case 'fi': withDim(m.dm || 'overworld', () => mpApplyFires([[m.x|0, m.y|0, m.z|0, m.g|0, m.b|0]])); break;
+    case 'fx': withDim(m.dm || 'overworld', () => { MP.fireApply = true; try{ removeFireAt(m.x|0, m.y|0, m.z|0); }finally{ MP.fireApply = false; } }); break;
     default: mpRecvGame(m);
   }
 }
 
 // ── Monde : l'hôte envoie l'état complet à chaque nouveau joueur ──
-function mpMakeHello(){
+// Contenu d'une dimension pour un nouvel arrivant : journal des blocs, orientations, coffres, fours (appelé dans la dimension liée)
+function mpDimPack(){
   const chests = [], cd = [];
   for(const [k,s] of CHESTS) chests.push([k, s.map(x=>[x.id, x.n])]);
   for(const [k,d] of CHEST_DIR) cd.push([k, d]);
   const furnaces = []; for(const k of FURNACES.keys()) furnaces.push(mpFurnaceMsg(k, true));
-  return {t:'hello', seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount, fz:worldFrozen?1:0, wx:wxNetState(),
-    edits:[...MP.edits.values()], cd, chests, furnaces,
+  return {edits:[...MP.edits.values()], cd, chests, furnaces};
+}
+function mpMakeHello(){
+  const ow = withDim('overworld', mpDimPack), nt = withDim('nether', mpDimPack);   // Overworld = champs de premier niveau, Nether = hello.nether ; dim = dimension de l'hôte (feu, objets, TNT, position d'arrivée)
+  return {t:'hello', dim:CUR_DIM, nether:nt, seed:WORLD_SEED, type:WORLD.type, mode:(WORLD.baseMode||WORLD.mode), sx:Math.floor(P.x), sz:Math.floor(P.z), dayT, dc:dayCount, fz:worldFrozen?1:0, wx:wxNetState(),
+    edits:ow.edits, cd:ow.cd, chests:ow.chests, furnaces:ow.furnaces,
     fire:FIRE_LIST.map(f=>[f.x, f.y, f.z, f.gen||0, f.block||0]),
     drops:drops.filter(d=>!d.collecting).map(d=>[d.uid, d.wx, d.wy, d.wz, d.id, d.n]),
     tnt:TNTS.filter(t=>!t.remote).map(t=>[t.uid, t.x, t.y, t.z, t.fuse])};
@@ -169,12 +174,18 @@ function mpOnHello(m){
   WORLD_SEED = m.seed|0; WORLD.type = m.type; WORLD.mode = WORLD.baseMode = m.mode; WORLD.bonus = false; WORLD.cheats = false;
   BIOME_SCALE = m.type==='large' ? 4 : 1; resetNoiseCaches();
   MP.spawn = {sx:m.sx|0, sz:m.sz|0};
-  for(const [k,d] of (m.cd||[])) CHEST_DIR.set(k, d);
+  withDim('overworld', () => { for(const [k,d] of (m.cd||[])) CHEST_DIR.set(k, d); });
+  if(m.nether) withDim('nether', () => { for(const [k,d] of (m.nether.cd||[])) CHEST_DIR.set(k, d); });
+  if(m.dim === 'nether') dimSwitch('nether');   // l'hôte est dans le Nether : on y apparaît (MP.spawn est dans ses coordonnées)
   mpEl('mp-panel').style.display = 'none'; mpEl('overlay').style.display = 'none';
+  const applySec = sec => {
+    for(const e of (sec.edits||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4], e[5]);
+    for(const [k,s] of (sec.chests||[])) mpSetChest(k, s);
+    for(const f of (sec.furnaces||[])) mpSetFurnace(f);
+  };
   handlePlayBtn().then(()=>{
-    for(const e of (m.edits||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4], e[5]);
-    for(const [k,s] of (m.chests||[])) mpSetChest(k, s);
-    for(const f of (m.furnaces||[])) mpSetFurnace(f);
+    withDim('overworld', () => applySec(m));
+    if(m.nether) withDim('nether', () => applySec(m.nether));
     mpApplyFires(m.fire||[]);
     for(const a of (m.drops||[])) spawnDrop(a[1], a[2], a[3], a[4], a[5], {remote:true, uid:a[0], vx:0, vy:0, vz:0});
     for(const a of (m.tnt||[])){ const x=+a[1], y=+a[2], z=+a[3]; if(Number.isFinite(x+y+z)) tntSpawn(x, y, z, a[4]|0, {remote:true, uid:String(a[0])}); }
@@ -186,6 +197,18 @@ function mpOnHello(m){
 
 // ── Messages de jeu (communs hôte / clients) ──
 function mpRecvGame(m){
+  const dm = m.dm || 'overworld';
+  if(dm !== CUR_DIM){   // message d'une autre dimension que la nôtre
+    switch(m.t){
+      case 'b': case 'ch': case 'fu': withDim(dm, () => mpRecvGameIn(m)); break;   // blocs, coffres, fours : l'autre dimension se met à jour en silence
+      case 'c': case 'gm': case 'p': mpRecvGameIn(m); break;                       // chat, mode de jeu, position (le joueur est alors masqué)
+      default: break;                                                             // objets au sol, TNT… : propres à une dimension
+    }
+    return;
+  }
+  mpRecvGameIn(m);
+}
+function mpRecvGameIn(m){
   switch(m.t){
     case 'p': { const pl = mpPlayer(m.f); pl.rp = m; if(m.ar) pl.ar = m.ar; break; }
     case 'c': addChat('<'+mpPlayer(m.f).name+'> '+String(m.m).slice(0,256)); break;
@@ -297,7 +320,7 @@ function mpApplyFires(list){
 }
 function mpFireD2(x, z){   // distance² au joueur le plus proche : l'hôte garde les feux vivants autour de TOUS les joueurs
   let best = (x-P.x)*(x-P.x) + (z-P.z)*(z-P.z);
-  if(MP.open && MP.role==='host') for(const p of MP.players.values()){ const d = p.rp; if(!d) continue; const q = (x-d.x)*(x-d.x) + (z-d.z)*(z-d.z); if(q<best) best = q; }
+  if(MP.open && MP.role==='host') for(const p of MP.players.values()){ const d = p.rp; if(!d || (d.dm||'overworld') !== CUR_DIM) continue; const q = (x-d.x)*(x-d.x) + (z-d.z)*(z-d.z); if(q<best) best = q; }
   return best;
 }
 

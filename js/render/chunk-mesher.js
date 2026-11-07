@@ -50,7 +50,7 @@ function bGrow(b){
   b.nrm = g(b.nrm,12,Int8Array);    b.idx = g(b.idx,6,Uint32Array);
   b.cap = nc;
 }
-const CHUNK_MESH = new Map();     // key -> [Mesh]
+let CHUNK_MESH = new Map();     // key -> [Mesh]
 const _ao = new Float32Array(4), _sk = new Float32Array(4), _bl = new Float32Array(4);
 
 function floodLight(A){
@@ -92,7 +92,7 @@ function buildChunkMesh(cx,cz){
       R.set(d.subarray(col*CHH, col*CHH+CHH), rc*RNY+1);
       if(st) RST.set(st.subarray(col*CHH, col*CHH+CHH), rc*RNY+1);
       else if(_rstUsed) RST.fill(0, rc*RNY+1, rc*RNY+1+CHH);
-      HMR[rc] = m.hmL[col]+1;
+      HMR[rc] = CUR_DIM === 'nether' ? RNY : m.hmL[col]+1;   // Nether : aucune lumière du ciel (heightmap au plafond du maillage)
       BIO[rc] = m.bio[col];
     }
   }

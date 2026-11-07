@@ -32,6 +32,7 @@ const TEX_DATA = {
   "coal_ore": "assets/textures/blocks/coal_ore.png",
   "gold_ore": "assets/textures/blocks/gold_ore.png",
   "diamond_ore": "assets/textures/blocks/diamond_ore.png",
+  "netherrack": "assets/textures/nether/blocks/Netherrack_%2528texture%2529_JE4_BE3.webp",   // 48×48 (3×16) ; le nom contient des « % » littéraux → « %2528 » dans l'URL
   "obsidian": "assets/textures/blocks/obsidian.png",   // texture générée (aucune obsidienne fournie dans les assets) : à remplacer par la vraie
   "iron_block": "assets/textures/blocks/iron_block.png",
   "gold_block": "assets/textures/blocks/gold_block.png",

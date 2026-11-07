@@ -5,7 +5,7 @@
 // ════════════════════════════════════════════════
 // Un four = un bloc : l'état (contenu + progression) est rangé par position "x,y,z", comme les coffres.
 // Tous les fours posés cuisent en parallèle ; casser un four fait tomber son contenu (voir doBreak).
-const FURNACES = new Map();   // "x,y,z" → {input, fuel, output, fuelTime, fuelMax, smeltTime, active}
+let FURNACES = new Map();   // "x,y,z" → {input, fuel, output, fuelTime, fuelMax, smeltTime, active}
 let FURNACE_CUR = null;       // clé du four dont l'interface est ouverte
 function newFurnaceState(){
   return {

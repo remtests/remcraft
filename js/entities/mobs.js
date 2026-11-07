@@ -16,7 +16,7 @@
 // Les créatures ne sont pas sauvegardées ni synchronisées en multijoueur (invoquées avec /summon).
 // ════════════════════════════════════════════════
 const MOB_IMG = {};          // textures chargées (canvas à la taille d'origine), par clé de MOB_TEX_DATA
-const MOBS = [];
+let MOBS = [];
 const MOB_MAX = 64;          // plafond de créatures simultanées
 const MOB_FAR = 160;         // au-delà de cette distance au joueur, la créature disparaît
 

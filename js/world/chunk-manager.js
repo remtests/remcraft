@@ -3,7 +3,7 @@
 // ════════════════════════════════════════════════
 // GESTION DES CHUNKS (chargement progressif, file triée, purge mémoire)
 // ════════════════════════════════════════════════
-const dirty = new Set(), urgent = new Set();
+let dirty = new Set(), urgent = new Set();
 let sortedQ = [], sortedI = 0, queueDirty = false;
 let lastPCX = null, lastPCZ = null;
 

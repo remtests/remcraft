@@ -95,10 +95,16 @@ function updDay(dt){
   const fl=0.97+0.03*Math.sin(torchLightTime*9)+0.015*Math.sin(torchLightTime*23.7);
   LIGHT_UNI.uBlkCol.value.setRGB(1.0*fl,0.72*fl,0.42*fl);
   LIGHT_UNI.uMin.value=S.brightness*0.25;
+  const inN = inNether();
+  if(inN){   // Nether : ciel / brouillard rouge sombre, pas de lumière du ciel (voir le mesher), lumière minimale relevée pour y voir sans torche
+    _clr.setRGB(0.20, 0.035, 0.035); renderer.setClearColor(_clr); scene.fog.color.copy(_clr);
+    LIGHT_UNI.uMin.value = Math.max(LIGHT_UNI.uMin.value, 0.30);
+    hemisphereL.color.setRGB(1,0.7,0.6); hemisphereL.groundColor.setRGB(0.6,0.35,0.3); hemisphereL.intensity = 0.7;   // entités
+  }
 
   const h=dayT*24|0, m=((dayT*24-h)*60)|0;
   const ph=dayT<0.2?'🌙':dayT<0.27?'🌅':dayT<0.73?'☀️':dayT<0.80?'🌆':'🌙';
-  const txt=`${ph} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}${wxIcon()}`;
+  const txt = inN ? '🔥 Nether' : `${ph} ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}${wxIcon()}`;
   if(txt!==updDay._last){ updDay._last=txt; document.getElementById('clk').textContent=txt; }
 }
 
