@@ -4,7 +4,7 @@
 // PORTAIL DU NETHER — activation et cohérence du cadre
 // ════════════════════════════════════════════════
 // Contenu : le bloc (activation, cohérence du cadre) et la téléportation Overworld ↔ Nether (liaison des portails, voile violet).
-// Pas de particules ni de sons. La dimension Nether est provisoire : une couche de netherrack (js/world/dimensions.js pour la mécanique de dimensions).
+// Pas de particules ni de sons. Génération du Nether : js/world/nether-generation.js ; mécanique de dimensions : js/world/dimensions.js.
 //  - Activation : briquet (clic droit) sur un cadre d'obsidienne complet → l'intérieur se remplit de blocs `nether_portal` (état axis selon l'orientation du cadre).
 //  - Cohérence : si un bloc du cadre (ou un bloc du portail) disparaît, tout le portail connecté disparaît, comme dans Minecraft.
 // Un portail posé à la main (/setblock, /fill) reste tel quel tant qu'aucun voisin ne disparaît : pratique pour tester le rendu sans cadre.
@@ -69,13 +69,14 @@ function portalSupported(x, y, z){
   const ok = (a,b,c) => { const v = getB(a,b,c); return v === PORTAL_ID || v === PORTAL_FRAME_ID; };
   return ok(x,y+1,z) && ok(x,y-1,z) && ok(x+dx,y,z+dz) && ok(x-dx,y,z-dz);
 }
+let PORTAL_SUSPEND = 0;   // > 0 : pas de vérification d'intégrité des portails (rejeu d'un journal de blocs : sauvegarde, arrivée en multijoueur — l'ordre du journal n'est pas l'ordre chronologique, l'obsidienne peut arriver après le portail qu'elle soutient)
 let PORTAL_CELLS = new Map();   // « x,y,z » → [x,y,z] : blocs de portail connus de la dimension liée (se remplit via setB, donc aussi au chargement d'une sauvegarde)
 const _pQ = [], _PN6 = [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]];
 let _pBusy = false;
 BLOCK_LISTENERS.push((x,y,z,old,oldS,v,s) => {
   if(v === PORTAL_ID && old !== PORTAL_ID) PORTAL_CELLS.set(x+','+y+','+z, [x,y,z]);          // registre pour la recherche d'un portail d'arrivée
   else if(old === PORTAL_ID && v !== PORTAL_ID) PORTAL_CELLS.delete(x+','+y+','+z);
-  if(old === v || v === PORTAL_ID) return;   // simple changement d'état, ou portail posé : rien à vérifier
+  if(old === v || v === PORTAL_ID || PORTAL_SUSPEND > 0) return;   // simple changement d'état, portail posé, ou rejeu en cours : rien à vérifier
   for(const [a,b,c] of _PN6) if(getB(x+a,y+b,z+c) === PORTAL_ID) _pQ.push(x+a,y+b,z+c);
   if(_pBusy || !_pQ.length) return;
   _pBusy = true;   // les retraits ci-dessous redéclenchent cet écouteur : ils ne font qu'alimenter la file (pas de récursion profonde)
@@ -132,8 +133,19 @@ function portalFind(tx, tz, range){
   return {x, y, z, axis: BS.get(PORTAL_ID, getS(x,y,z), 'axis')};
 }
 
-// Sol de l'Overworld en (x,z) : premier bloc plein en descendant (plantes, feuilles et troncs ignorés ; la surface de l'eau compte)
+// Sol d'arrivée en (x,z), dans la dimension liée. Overworld : premier bloc plein en descendant (plantes, feuilles et troncs ignorés ; la surface de l'eau compte).
+// Nether : un bloc plein surmonté de 4 cases libres, le plus proche de NETHER_LAVA_Y + 8 ; à défaut, une plateforme flottante à cette hauteur.
 function portalGroundY(x, z){
+  if(inNether()){
+    const want = NETHER_LAVA_Y + 8;
+    let best = null;
+    for(let y = Y_MIN + 4; y <= Y_MAX - 10; y++){
+      const b = getB(x,y,z), d = b ? BLOCKS[b] : null;
+      if(!d || d.isFluid || d.noCollide) continue;
+      if(getB(x,y+1,z) === 0 && getB(x,y+2,z) === 0 && getB(x,y+3,z) === 0 && getB(x,y+4,z) === 0 && (best === null || Math.abs(y-want) < Math.abs(best-want))) best = y;
+    }
+    return best === null ? want : best;
+  }
   for(let y = Y_MAX-6; y > Y_MIN; y--){
     const b = getB(x,y,z);
     if(!b) continue;
@@ -166,7 +178,7 @@ function portalTravel(c){
   const d = portalDestination(P.x, P.z, toNether);
   dimSwitch(toNether ? 'nether' : 'overworld');   // à partir d'ici, getB / setB / portalFind… parlent de la dimension d'arrivée
   let dest = portalFind(d.x, d.z, toNether ? PORTAL_RANGE_NETHER : PORTAL_RANGE_OVERWORLD);
-  if(!dest) dest = portalBuild(d.x, (toNether ? NETHER_FLOOR_Y : portalGroundY(d.x, d.z)) + 1, d.z, c.axis);
+  if(!dest) dest = portalBuild(d.x, portalGroundY(d.x, d.z) + 1, d.z, c.axis);
   P.x = dest.x + 0.5; P.z = dest.z + 0.5; P.y = dest.y + 0.01;
   P.px = P.x; P.py = P.y; P.pz = P.z; P.vx = P.vy = P.vz = 0; P.sx = P.sz = 0;
   SV.fall = 0;

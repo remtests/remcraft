@@ -147,7 +147,36 @@ addBlock('lava', 'Lava', 'lava', 'lava', 'lava', {hard:100, drop:null, noCollide
 // États : axis (data/block-states.js). Rendu : classe de mesh 5, texture animée dédiée (render/portal-render.js) → les tuiles ci-dessous ne servent jamais.
 // Introuvable dans le créatif (noCreative) ; se pose avec /setblock x y z nether_portal[axis=z]. Ajouté EN DERNIER : les ids des mondes existants ne bougent pas.
 addBlock('nether_portal', 'Nether Portal', 'stone', 'stone', 'stone', {hard:999, drop:null, noCollide:true, portal:true, emit:11, noCreative:true});
-_all('netherrack', 'Netherrack', 'netherrack', {hard:1, mat:'stone', needsPick:1});   // sol du Nether (génération provisoire : chunk-generation.js)
+const _nrk = _all('netherrack', 'Netherrack', 'netherrack', {hard:1, mat:'stone', needsPick:1});   // sol du Nether (génération : world/nether-generation.js)
+
+// ── Blocs du Nether (textures : assets/textures/nether). Tous ajoutés après le portail : les ids des mondes existants ne bougent pas. ──
+// Dureté : même échelle que le reste du jeu (pierre = 3). needsPick/needsTier : comme l'obsidienne pour les blocs « diamant ».
+_all('soul_sand', 'Soul Sand', 'soul_sand', {hard:1, mat:'earth'});
+const _soulSoil = _all('soul_soil', 'Soul Soil', 'soul_soil', {hard:1, mat:'earth'});
+// Basalte : colonne comme les bûches — 3 états d'axe (vertical, X, Z) choisis à la pose selon la face visée ; la tuile latérale tournée 'basalt_side_r' est générée par l'atlas
+const _bas = addBlock('basalt', 'Basalt', 'basalt_top', 'basalt_side', 'basalt_top', {hard:2.5, mat:'stone', needsPick:1});
+BLOCKS[_bas].logX = addBlock('basalt_x', 'Basalt', 'basalt_top', 'basalt_side', 'basalt_top', {hard:2.5, mat:'stone', needsPick:1, variantOf:_bas, drop:_bas, axis:'x', tSideR:'basalt_side_r'});
+BLOCKS[_bas].logZ = addBlock('basalt_z', 'Basalt', 'basalt_top', 'basalt_side', 'basalt_top', {hard:2.5, mat:'stone', needsPick:1, variantOf:_bas, drop:_bas, axis:'z', tSideR:'basalt_side_r'});
+addBlock('blackstone', 'Blackstone', 'blackstone_top', 'blackstone', 'blackstone_top', {hard:3, mat:'stone', needsPick:1});
+_all('nether_bricks',          'Nether Bricks',          'nether_bricks',          {hard:4, mat:'stone', needsPick:1});
+_all('cracked_nether_bricks',  'Cracked Nether Bricks',  'cracked_nether_bricks',  {hard:4, mat:'stone', needsPick:1});
+// Minerais : l'or du Nether donne de l'or brut (pas de pépites dans le jeu) ; le quartz n'existe pas encore comme objet → le minerai se récupère tel quel
+_all('nether_gold_ore',   'Nether Gold Ore',   'nether_gold_ore',   {hard:3, mat:'stone', needsPick:1, drop:'raw_gold'});
+_all('nether_quartz_ore', 'Nether Quartz Ore', 'nether_quartz_ore', {hard:3, mat:'stone', needsPick:1});
+addBlock('ancient_debris', 'Ancient Debris', 'ancient_debris_top', 'ancient_debris_side', 'ancient_debris_top', {hard:30, mat:'stone', needsPick:2, needsTier:5});
+_all('netherite_block', 'Block of Netherite', 'netherite_block', {hard:50, mat:'stone', needsPick:2, needsTier:5});
+const _crimNylium = addBlock('crimson_nylium', 'Crimson Nylium', 'crimson_nylium_top', 'crimson_nylium_side', 'netherrack', {hard:1, mat:'stone', needsPick:1, drop:_nrk});
+const _warpNylium = addBlock('warped_nylium',  'Warped Nylium',  'warped_nylium_top',  'warped_nylium_side',  'netherrack', {hard:1, mat:'stone', needsPick:1, drop:_nrk});
+_all('nether_wart_block',  'Nether Wart Block',  'nether_wart_block',  {hard:1, mat:'soft'});
+_all('warped_wart_block',  'Warped Wart Block',  'warped_wart_block',  {hard:1, mat:'soft'});
+_all('crimson_planks', 'Crimson Planks', 'crimson_planks', {hard:1.5, mat:'wood'});   // pas de burn : le bois du Nether ne brûle pas
+_all('warped_planks',  'Warped Planks',  'warped_planks',  {hard:1.5, mat:'wood'});
+// Plantes du Nether : en croix comme les fleurs, mais posables sur de la terre / herbe, du sol d'âmes ou de la nylium (plantOn : ids de supports, lu par chests.js)
+const _netherPlant = {hard:0, noCollide:true, plant:true, plantOn:[1, 2, _soulSoil, _crimNylium, _warpNylium]};
+['crimson_roots:Crimson Roots', 'warped_roots:Warped Roots', 'nether_sprouts:Nether Sprouts', 'crimson_fungus:Crimson Fungus', 'warped_fungus:Warped Fungus'].forEach(s => {
+  const [sid, name] = s.split(':'); _all(sid, name, sid, Object.assign({}, _netherPlant));
+});
+// Pas de tiges (Crimson / Warped Stem) ni de champignons géants : seule la texture du dessus est fournie, il manque celle des côtés.
 
 // id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
 const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;

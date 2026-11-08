@@ -179,7 +179,8 @@ function mpOnHello(m){
   if(m.dim === 'nether') dimSwitch('nether');   // l'hôte est dans le Nether : on y apparaît (MP.spawn est dans ses coordonnées)
   mpEl('mp-panel').style.display = 'none'; mpEl('overlay').style.display = 'none';
   const applySec = sec => {
-    for(const e of (sec.edits||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4], e[5]);
+    PORTAL_SUSPEND++;   // le journal de l'hôte n'est pas chronologique (voir nether-portal.js)
+    try{ for(const e of (sec.edits||[])) mpApplyEdit(e[0], e[1], e[2], e[3], e[4], e[5]); } finally { PORTAL_SUSPEND--; }
     for(const [k,s] of (sec.chests||[])) mpSetChest(k, s);
     for(const f of (sec.furnaces||[])) mpSetFurnace(f);
   };

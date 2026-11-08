@@ -97,7 +97,7 @@ function updDay(dt){
   LIGHT_UNI.uMin.value=S.brightness*0.25;
   const inN = inNether();
   if(inN){   // Nether : ciel / brouillard rouge sombre, pas de lumière du ciel (voir le mesher), lumière minimale relevée pour y voir sans torche
-    _clr.setRGB(0.20, 0.035, 0.035); renderer.setClearColor(_clr); scene.fog.color.copy(_clr);
+    netherFogStep(); _clr.setRGB(_nFog[0], _nFog[1], _nFog[2]); renderer.setClearColor(_clr); scene.fog.color.copy(_clr);   // couleur du biome où se trouve le joueur, fondue en douceur
     LIGHT_UNI.uMin.value = Math.max(LIGHT_UNI.uMin.value, 0.30);
     hemisphereL.color.setRGB(1,0.7,0.6); hemisphereL.groundColor.setRGB(0.6,0.35,0.3); hemisphereL.intensity = 0.7;   // entités
   }

@@ -12,7 +12,7 @@ const Y_MAX =  89;
 // Chaque dimension a ses propres chunks, lumières, coffres, fours, feux, fluides… : tout l'état « du monde » est échangé par dimBind().
 // CUR_DIM : dimension liée (celle du joueur, ou celle d'un withDim() en cours). Les coordonnées sont celles de la dimension.
 let CUR_DIM = 'overworld';                              // 'overworld' | 'nether'
-const NETHER_FLOOR_Y = 32;                              // y monde de l'unique couche de netherrack (génération provisoire)
+const NETHER_LAVA_Y = Y_MIN + 32;                       // niveau de l'océan de lave du Nether (génération : world/nether-generation.js)
 const inNether = () => CUR_DIM === 'nether';
 const BED_LY = Y_MIN + Y_OFF;   // index local de la couche de bedrock (y = -60) ; en dessous : rien n'est généré
 

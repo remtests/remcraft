@@ -114,7 +114,7 @@ function doPlace(){
   const px=tp?t.bx:t.pbx, py=tp?t.by:t.pby, pz=tp?t.bz:t.pbz;
   if(py<Y_MIN||py>Y_MAX) return;
   if(getB(px,py,pz)!==0 && !tp && !FLUIDK[getB(px,py,pz)]) return;   // un fluide se remplace comme de l'air
-  if(BLOCKS[blockId]?.plant){ const bb=getB(px,py-1,pz); if(bb!==1&&bb!==2) return; }
+  if(BLOCKS[blockId]?.plant){ const bb=getB(px,py-1,pz); if(bb!==1&&bb!==2&&!(BLOCKS[blockId].plantOn&&BLOCKS[blockId].plantOn.includes(bb))) return; }   // plantOn : supports supplémentaires (plantes du Nether)
   // La torche ne peut être posée que sur un bloc solide en dessous
   const _sup = getB(px,py-1,pz), supOk = !!_sup && !FLUIDK[_sup];   // on ne pose rien « sur » l'eau ou la lave
   if(isTorchItem && !supOk) return;
