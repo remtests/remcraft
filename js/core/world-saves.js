@@ -110,6 +110,7 @@ async function wsApplyPending(prog){
   for(let i=0;i+3<e.length;i+=4) list.push([e[i], e[i+1], e[i+2], e[i+3]]);
   for(const x of (Array.isArray(st.ed) ? st.ed : [])) if(Array.isArray(x)) list.push(x);
   let t0 = performance.now();
+  PORTAL_SUSPEND++;   // rejeu du journal : aucune vérification d'intégrité des portails (levée après la boucle)
   for(let i=0;i<list.length;i++){
     const [x,y,z,v] = list[i];
     if(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(z) && Number.isInteger(v) && (v===0 || BLOCKS[v])) setB(x, y, z, v, list[i][5]);   // [5] = état du bloc (absent des anciennes sauvegardes → 0)
@@ -118,6 +119,7 @@ async function wsApplyPending(prog){
       await nextFrame(); t0 = performance.now();
     }
   }
+  PORTAL_SUSPEND--;
   for(const [k,s] of (Array.isArray(st.chests) ? st.chests : [])){
     if(!wsKeyOk(k) || !Array.isArray(s)) continue;
     const slots = chestSlots(k);
@@ -138,10 +140,13 @@ function wsApplySection(sec){
   const list = [], e = Array.isArray(sec.e) ? sec.e : [];
   for(let i=0;i+3<e.length;i+=4) list.push([e[i], e[i+1], e[i+2], e[i+3]]);
   for(const x of (Array.isArray(sec.ed) ? sec.ed : [])) if(Array.isArray(x)) list.push(x);
-  for(const a of list){
-    const [x,y,z,v] = a;
-    if(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(z) && Number.isInteger(v) && (v===0 || BLOCKS[v])) setB(x, y, z, v, a[5]);
-  }
+  PORTAL_SUSPEND++;
+  try{
+    for(const a of list){
+      const [x,y,z,v] = a;
+      if(Number.isInteger(x) && Number.isInteger(y) && Number.isInteger(z) && Number.isInteger(v) && (v===0 || BLOCKS[v])) setB(x, y, z, v, a[5]);
+    }
+  } finally { PORTAL_SUSPEND--; }
   for(const [k,s] of (Array.isArray(sec.chests) ? sec.chests : [])){
     if(!wsKeyOk(k) || !Array.isArray(s)) continue;
     const slots = chestSlots(k);

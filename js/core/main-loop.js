@@ -76,7 +76,7 @@ function loop(ts){
       dbg.innerHTML=
         `${_fpsVal} FPS · draw calls: ${inf.calls} · triangles: ${(inf.triangles/1000).toFixed(0)}k · chunks: ${CHUNK_MESH.size}<br>`+
         `XYZ: ${P.x.toFixed(1)} / ${P.y.toFixed(1)} / ${P.z.toFixed(1)} (${CUR_DIM}) | Yaw: ${(P.yaw*180/Math.PI%360).toFixed(0)}° Pitch: ${(P.pitch*180/Math.PI).toFixed(0)}°<br>`+
-        `On ground: ${P.onGround} | Biome: ${biomeNames[_ct]} | Target: ${t&&BLOCKS[t.bid]?BLOCKS[t.bid].name:'—'}<br>`+
+        `On ground: ${P.onGround} | Biome: ${inNether() ? NETHER_BIOME_NAMES[netherBiomeAt(P.x,P.z)] : biomeNames[_ct]} | Target: ${t&&BLOCKS[t.bid]?BLOCKS[t.bid].name:'—'}<br>`+
         `Seed: ${WORLD_SEED} | 🕯️ Torches: ${LIGHTSRC.size} | queue: ${dirty.size} | ${(dayT*24).toFixed(1)}h`;
     }
   }
