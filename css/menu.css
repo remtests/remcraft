@@ -14,6 +14,11 @@ canvas#c{display:block;width:100vw;height:100vh;image-rendering:pixelated;}   /*
   font-family:'Courier New',monospace;
 }
 
+/* Panorama du menu (js/ui/menu-panorama.js) : tant qu'il s'affiche, le body reçoit « pano-on » ; le fond noir opaque des écrans de menu laisse alors voir le cube qui tourne.
+   Sans panorama (images ou WebGL absents) la classe n'est jamais posée : le menu reste noir. */
+body.pano-on #overlay{background:transparent;}
+body.pano-on #world-select, body.pano-on #create-world, body.pano-on #mp-panel{background:rgba(0,0,0,.62);}
+
 /* Panneau central semi-transparent style minecraft */
 #mc-menu-panel{
   display:flex;flex-direction:column;align-items:center;
