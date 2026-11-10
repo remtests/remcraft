@@ -46,3 +46,9 @@ npx serve .
 - Blocs ajoutés (ids 115 et suivants, `js/data/blocks.js`, textures dans `assets/textures/nether`) : sable des âmes, sol d'âmes, basalte (3 axes comme les bûches), blackstone, briques du Nether (+ fissurées), minerais d'or et de quartz du Nether, ancient debris, bloc de netherite, nylium cramoisie / biscornue, blocs de verrues, planches cramoisies / biscornues, racines, pousses et champignons. Les plantes se posent sur herbe, terre, sol d'âmes ou nylium (`plantOn`). Pas de tiges ni de champignons géants : seule la texture du dessus des tiges est fournie.
 - Rejeu de journal (sauvegarde, arrivée en multijoueur) : `PORTAL_SUSPEND` suspend la vérification d'intégrité des portails, car l'ordre du journal n'est pas l'ordre chronologique.
 - Ambiance du Nether : ciel et fond rouge sombre, ni soleil, ni lune, ni nuages, ni pluie, aucune lumière du ciel (le mesher traite ces chunks comme couverts), lumière minimale relevée.
+
+## Panorama du menu
+
+- `js/ui/menu-panorama.js` : fond du menu comme Minecraft — cube de 6 images (`assets/textures/gui/title/background/panorama_0..5.png`) vu de l'intérieur, champ de vision 85°, rotation 2°/s (un tour en 3 minutes), regard relevé de 25°, fondu d'entrée d'une seconde. Renderer et canvas à part (`#menu-panorama`, sous les menus) ; actif seulement tant qu'aucune partie n'est lancée, suspendu pendant l'écran de chargement. Si les images ou WebGL manquent, le menu reste noir.
+- Quand le panorama s'affiche, le `<body>` reçoit la classe `pano-on` (`css/menu.css`) : le menu principal devient transparent, les écrans Select World / Create World / Multiplayer sont assombris à 62 %.
+- Orientation des faces (0 devant, 1 droite, 2 derrière, 3 gauche, 4 haut, 5 bas) déduite de la continuité des bords des images ; `panorama_overlay.png` (1×1 transparent) est copié mais inutilisé.
