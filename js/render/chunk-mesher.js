@@ -148,13 +148,20 @@ function buildChunkMesh(cx,cz){
     }
   }
   for(let dx=-1;dx<=1;dx++) for(let dz=-1;dz<=1;dz++){   // lave générée : quelques cases de surface par chunk éclairent la caverne (meta.lsrc, voir chunk-generation.js)
-    const lm = CHUNK_META.get(ckey(cx+dx,cz+dz)); if(!lm || !lm.lsrc) continue;
+    const lm = CHUNK_META.get(ckey(cx+dx,cz+dz)); if(!lm) continue;
     const ls = lm.lsrc;
-    for(let k=0;k<ls.length;k+=3){
+    if(ls) for(let k=0;k<ls.length;k+=3){
       const rx = ls[k]-x0+17, rz = ls[k+2]-z0+17;
       if(rx<1||rx>48||rz<1||rz>48) continue;
       const i = (rz*RW+rx)*RNY + ls[k+1]+Y_OFF+1;
       if(FLUIDK[R[i]] === 2 && LB[i] < 14){ LB[i] = 14; Q[_qt++&QMASK] = i; }   // ignorée si la lave a été retirée depuis
+    }
+    const es = lm.esrc;   // émetteurs générés (shroomlights des gros champignons du Nether) : même principe, au niveau d'émission du bloc
+    if(es) for(let k=0;k<es.length;k+=3){
+      const rx = es[k]-x0+17, rz = es[k+2]-z0+17;
+      if(rx<1||rx>48||rz<1||rz>48) continue;
+      const i = (rz*RW+rx)*RNY + es[k+1]+Y_OFF+1, em = EMIT[R[i]];
+      if(em && LB[i] < em){ LB[i] = em; Q[_qt++&QMASK] = i; }   // ignorée si le bloc a été retiré depuis
     }
   }
   floodLight(LB);

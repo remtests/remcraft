@@ -176,7 +176,17 @@ const _netherPlant = {hard:0, noCollide:true, plant:true, plantOn:[1, 2, _soulSo
 ['crimson_roots:Crimson Roots', 'warped_roots:Warped Roots', 'nether_sprouts:Nether Sprouts', 'crimson_fungus:Crimson Fungus', 'warped_fungus:Warped Fungus'].forEach(s => {
   const [sid, name] = s.split(':'); _all(sid, name, sid, Object.assign({}, _netherPlant));
 });
-// Pas de tiges (Crimson / Warped Stem) ni de champignons géants : seule la texture du dessus est fournie, il manque celle des côtés.
+// Tiges (comme les bûches : 3 états d'axe) et shroomlight : ils servent aux gros champignons du Nether (world/nether-generation.js).
+// Textures : le dessus des tiges est fourni ; l'écorce latérale et le shroomlight sont GÉNÉRÉS (assets/textures/nether/generated, provisoires, à remplacer).
+function _stem(sid, name, top, side){
+  const b = addBlock(sid, name, top, side, top, {hard:2, mat:'wood'});
+  BLOCKS[b].logX = addBlock(sid + '_x', name, top, side, top, {hard:2, mat:'wood', variantOf:b, drop:b, axis:'x', tSideR:side + '_r'});
+  BLOCKS[b].logZ = addBlock(sid + '_z', name, top, side, top, {hard:2, mat:'wood', variantOf:b, drop:b, axis:'z', tSideR:side + '_r'});
+  return b;
+}
+_stem('crimson_stem', 'Crimson Stem', 'crimson_stem_top', 'crimson_stem_side');
+_stem('warped_stem',  'Warped Stem',  'warped_stem_top',  'warped_stem_side');
+_all('shroomlight', 'Shroomlight', 'shroomlight', {hard:1, mat:'soft', emit:15});
 
 // id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
 const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;

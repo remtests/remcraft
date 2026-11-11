@@ -60,6 +60,12 @@ const TEX_DATA = {
   "nether_sprouts": "assets/textures/nether/plants/Nether_Sprouts_%2528texture%2529_JE2_BE2.webp",
   "crimson_fungus": "assets/textures/nether/plants/Crimson_Fungus_%2528texture%2529_JE1_BE1.webp",
   "warped_fungus": "assets/textures/nether/plants/Warped_Fungus_%2528item%2529_JE2_BE1.webp",
+  // Tiges et shroomlight : dessus fourni ; écorce latérale et shroomlight GÉNÉRÉS (provisoires, voir assets/textures/nether/generated/generated.txt)
+  "crimson_stem_top": "assets/textures/nether/blocks/Crimson_Stem_%2528top_texture%2529_JE1.webp",
+  "warped_stem_top": "assets/textures/nether/blocks/Warped_Stem_%2528top_texture%2529_JE1.webp",
+  "crimson_stem_side": "assets/textures/nether/generated/crimson_stem_side.png",
+  "warped_stem_side": "assets/textures/nether/generated/warped_stem_side.png",
+  "shroomlight": "assets/textures/nether/generated/shroomlight.png",
   "obsidian": "assets/textures/blocks/obsidian.png",   // texture générée (aucune obsidienne fournie dans les assets) : à remplacer par la vraie
   "iron_block": "assets/textures/blocks/iron_block.png",
   "gold_block": "assets/textures/blocks/gold_block.png",

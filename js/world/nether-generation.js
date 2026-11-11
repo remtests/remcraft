@@ -8,6 +8,8 @@
 // 2. Biomes : 5 biomes tirés d'un climat (température, humidité) en bruit 2D, par proximité avec 5 points de référence (comme le multi-bruit de Minecraft).
 //    Chacun modifie le relief (plaine de sable d'âmes, piliers de basalte…) puis la surface (voir plus bas).
 // 3. Minerais : filons de quartz, d'or, et d'ancient debris (profond, jamais au contact de l'air ou de la lave).
+// 4. Gros champignons (les « arbres » du Nether) dans les forêts cramoisie et biscornue : tige de 5 à 11 blocs (parfois épaisse), chapeau de verrues, shroomlights.
+//    Un champignon ne dépend jamais des chunks voisins : son empreinte (rayon ≤ 4) tient dans son chunk.
 // La densité est échantillonnée sur une grille grossière alignée sur les coordonnées du MONDE (4 en x/z, 8 en y) puis interpolée :
 // les chunks voisins partagent leurs échantillons de bord → aucune couture, et c'est ~30× moins de bruit à calculer.
 // Appelé par generateChunk() quand CUR_DIM === 'nether' ; remplit data/meta d'un chunk neuf. meta.bio reste à 0 : le biome du Nether se lit avec netherBiomeAt().
@@ -17,6 +19,7 @@ const NG = {   // ids des blocs posés par la génération
   crimsonNylium:BID('crimson_nylium'), warpedNylium:BID('warped_nylium'),
   crimsonRoots:BID('crimson_roots'), warpedRoots:BID('warped_roots'), sprouts:BID('nether_sprouts'), crimsonFungus:BID('crimson_fungus'), warpedFungus:BID('warped_fungus'),
   quartz:BID('nether_quartz_ore'), gold:BID('nether_gold_ore'), debris:BID('ancient_debris'),
+  crimsonStem:BID('crimson_stem'), warpedStem:BID('warped_stem'), netherWart:BID('nether_wart_block'), warpedWart:BID('warped_wart_block'), shroomlight:BID('shroomlight'),
 };
 const NG_STEP_XZ = 4, NG_STEP_Y = 8;
 const NG_NX = CSIZ/NG_STEP_XZ + 1, NG_NY = Math.ceil((Y_MAX - Y_MIN)/NG_STEP_Y) + 2;
@@ -97,6 +100,35 @@ function netherVein(data, rng, id, size, ylo, yhi, noAir){
   }
 }
 
+// Gros champignon dont la tige part du sol (lx, wy, lz) ; renvoie false si la place manque (colonne ou chapeau bloqués). Toute l'empreinte (rayon ≤ 4) reste dans le chunk
+// → pas de dépendance entre chunks voisins, génération déterministe. Chapeau : verrues posées uniquement dans l'air ; shroomlights enregistrés dans meta.esrc (lumière).
+function netherHugeFungus(data, meta, rng, lx, wy, lz, crimson){
+  const h = 5 + ((rng()*7)|0), ty = wy + h;
+  const solidAt = (x, z) => { const v = data[(x*CSIZ + z)*CHH + wy + Y_OFF]; return v !== 0 && v !== NETHER_LAVA_ID && !(v === NG.crimsonRoots || v === NG.warpedRoots || v === NG.sprouts || v === NG.crimsonFungus || v === NG.warpedFungus); };
+  const thick = rng() < 0.15 && solidAt(lx+1, lz) && solidAt(lx, lz+1) && solidAt(lx+1, lz+1);   // tige épaisse (2×2) seulement si les 4 colonnes reposent sur du plein
+  const stem = crimson ? NG.crimsonStem : NG.warpedStem, wart = crimson ? NG.netherWart : NG.warpedWart;
+  const free = v => v === 0 || v === NG.crimsonRoots || v === NG.warpedRoots || v === NG.sprouts || v === NG.crimsonFungus || v === NG.warpedFungus;
+  const cols = thick ? [[0,0],[1,0],[0,1],[1,1]] : [[0,0]];
+  for(const [dx,dz] of cols) for(let y = wy + 1; y <= ty + 1; y++) if(!free(data[((lx+dx)*CSIZ + lz+dz)*CHH + y + Y_OFF])) return false;   // la tige et le haut du chapeau passent
+  const cx = lx + (thick ? 0.5 : 0), cz = lz + (thick ? 0.5 : 0), es = meta.esrc || (meta.esrc = []);
+  for(const [dx,dz] of cols) for(let y = wy + 1; y <= ty; y++) data[((lx+dx)*CSIZ + lz+dz)*CHH + y + Y_OFF] = stem;
+  // chapeau : 4 couches (haut → bas) ; d2 = distance² au centre de la tige
+  const layers = [[1, 0, 1.5, 0.00], [0, 0, 6.5, crimson ? 0.04 : 0.14], [-1, 0, 10.5, crimson ? 0.08 : 0.06], [-2, 5.5, 10.5, crimson ? 0.38 : 0.26]];   // [dy, d2 min, d2 max, proba de shroomlight]
+  for(const [dy, lo, hi, pLight] of layers){
+    for(let x = Math.floor(cx) - 4; x <= Math.ceil(cx) + 4; x++) for(let z = Math.floor(cz) - 4; z <= Math.ceil(cz) + 4; z++){
+      if(x < 0 || x >= CSIZ || z < 0 || z >= CSIZ) continue;
+      const d2 = (x - cx)*(x - cx) + (z - cz)*(z - cz);
+      if(d2 > hi || d2 < lo) continue;
+      const i = (x*CSIZ + z)*CHH + ty + dy + Y_OFF;
+      if(!free(data[i])) continue;
+      const light = pLight > 0 && rng() < pLight;
+      data[i] = light ? NG.shroomlight : wart;
+      if(light) es.push(meta.x0 + x, ty + dy, meta.z0 + z);
+    }
+  }
+  return true;
+}
+
 const _ngS = new Float32Array(NG_NX*NG_NX*NG_NY), _ngW = new Float32Array(5), _ngBi = new Uint8Array(CSIZ*CSIZ);
 function generateNetherChunk(data, meta, cx, cz){
   const SD = WORLD_SEED, x0 = cx*CSIZ, z0 = cz*CSIZ;
@@ -165,6 +197,20 @@ function generateNetherChunk(data, meta, cx, cz){
       }
       data[i] = top;
       if(plant) data[i+1] = plant;
+    }
+  }
+
+  // 4. gros champignons : au plus 22 essais par chunk, sur le premier sol de nylium (du bas vers le haut) qui offre assez de hauteur libre ; espacement minimum de 4 blocs
+  meta.x0 = x0; meta.z0 = z0;
+  const trng = mkRng(((SD^0x4e455441) + Math.imul(cx, 668265263) + Math.imul(cz, 374761393))|0), placed = [];
+  for(let n = 0; n < 22; n++){
+    const lx = 3 + ((trng()*9)|0), lz = 3 + ((trng()*9)|0), bi = _ngBi[lx*CSIZ + lz];   // 3..11 : l'empreinte (rayon 4 + tige épaisse) reste dans le chunk
+    if(bi !== NB_CRIMSON && bi !== NB_WARPED) continue;
+    if(placed.some(p => (p[0]-lx)*(p[0]-lx) + (p[1]-lz)*(p[1]-lz) < 16)) continue;
+    const nylium = bi === NB_CRIMSON ? NG.crimsonNylium : NG.warpedNylium, base = (lx*CSIZ + lz)*CHH;
+    for(let wy = NETHER_LAVA_Y + 1; wy <= Y_MAX - 16; wy++){   // du bas vers le haut : le premier sol de nylium qui offre assez de hauteur libre
+      if(data[base + wy + Y_OFF] !== nylium) continue;
+      if(netherHugeFungus(data, meta, trng, lx, wy, lz, bi === NB_CRIMSON)){ placed.push([lx, lz]); break; }
     }
   }
 
