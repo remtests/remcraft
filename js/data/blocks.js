@@ -149,7 +149,7 @@ addBlock('lava', 'Lava', 'lava', 'lava', 'lava', {hard:100, drop:null, noCollide
 addBlock('nether_portal', 'Nether Portal', 'stone', 'stone', 'stone', {hard:999, drop:null, noCollide:true, portal:true, emit:11, noCreative:true});
 const _nrk = _all('netherrack', 'Netherrack', 'netherrack', {hard:1, mat:'stone', needsPick:1});   // sol du Nether (génération : world/nether-generation.js)
 
-// ── Blocs du Nether (textures : assets/textures/nether). Tous ajoutés après le portail : les ids des mondes existants ne bougent pas. ──
+// ── Blocs du Nether (textures : assets/textures/vanilla_textures). Tous ajoutés après le portail : les ids des mondes existants ne bougent pas. ──
 // Dureté : même échelle que le reste du jeu (pierre = 3). needsPick/needsTier : comme l'obsidienne pour les blocs « diamant ».
 _all('soul_sand', 'Soul Sand', 'soul_sand', {hard:1, mat:'earth'});
 const _soulSoil = _all('soul_soil', 'Soul Soil', 'soul_soil', {hard:1, mat:'earth'});
@@ -176,7 +176,17 @@ const _netherPlant = {hard:0, noCollide:true, plant:true, plantOn:[1, 2, _soulSo
 ['crimson_roots:Crimson Roots', 'warped_roots:Warped Roots', 'nether_sprouts:Nether Sprouts', 'crimson_fungus:Crimson Fungus', 'warped_fungus:Warped Fungus'].forEach(s => {
   const [sid, name] = s.split(':'); _all(sid, name, sid, Object.assign({}, _netherPlant));
 });
-// Pas de tiges (Crimson / Warped Stem) ni de champignons géants : seule la texture du dessus est fournie, il manque celle des côtés.
+// Tiges (comme les bûches : 3 états d'axe) et shroomlight : ils servent aux gros champignons du Nether (world/nether-generation.js).
+// Textures : officielles (assets/textures/vanilla_textures) ; la face latérale des tiges est une feuille d'animation dont seule la 1re image est utilisée.
+function _stem(sid, name, top, side){
+  const b = addBlock(sid, name, top, side, top, {hard:2, mat:'wood'});
+  BLOCKS[b].logX = addBlock(sid + '_x', name, top, side, top, {hard:2, mat:'wood', variantOf:b, drop:b, axis:'x', tSideR:side + '_r'});
+  BLOCKS[b].logZ = addBlock(sid + '_z', name, top, side, top, {hard:2, mat:'wood', variantOf:b, drop:b, axis:'z', tSideR:side + '_r'});
+  return b;
+}
+_stem('crimson_stem', 'Crimson Stem', 'crimson_stem_top', 'crimson_stem_side');
+_stem('warped_stem',  'Warped Stem',  'warped_stem_top',  'warped_stem_side');
+_all('shroomlight', 'Shroomlight', 'shroomlight', {hard:1, mat:'soft', emit:15});
 
 // id numérique d'un bloc à partir de son sid (génération, recettes, combustibles) : indépendant de l'ordre de déclaration
 const _SID = {}; for(const id in BLOCKS) _SID[BLOCKS[id].sid] = +id;

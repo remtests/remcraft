@@ -5,7 +5,8 @@
 function toTile16(img){
   const cv = document.createElement('canvas'); cv.width = cv.height = 16;
   const cx = cv.getContext('2d'); cx.imageSmoothingEnabled = false;
-  const w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+  const w = img.naturalWidth || img.width; let h = img.naturalHeight || img.height;
+  if(h > w && h % w === 0) h = w;   // feuille d'animation verticale (ex. crimson_stem 16×80) : seule la 1re image est utilisée
   if(w > 16 && w === h && w % 16 === 0){
     try{
       const big = document.createElement('canvas'); big.width = w; big.height = h;
@@ -19,7 +20,7 @@ function toTile16(img){
       return cv;
     }catch(e){ /* canvas "tainted" (file://) : repli sur la réduction du navigateur */ }
   }
-  cx.drawImage(img, 0, 0, 16, 16);
+  cx.drawImage(img, 0, 0, w, h, 0, 0, 16, 16);
   return cv;
 }
 
