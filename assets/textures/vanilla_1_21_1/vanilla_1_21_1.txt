@@ -1,0 +1,5 @@
+Textures de blocs de Minecraft Java 1.21.1 (assets/minecraft/textures/block), source : InventivetalentDev/minecraft-assets.
+BIBLIOTHÈQUE POUR PLUS TARD : rien dans le jeu ne les charge (aucune entrée dans js/data/texture-manifest.js, aucun bloc défini avec ces tuiles).
+- 1012 images PNG (16×16 pour la plupart ; les images plus hautes sont des feuilles d'animation, voir les fichiers .mcmeta), 49 fichiers .mcmeta (métadonnées d'animation),
+  _list.json (liste des fichiers de l'archive d'origine).
+- Pour utiliser une texture plus tard : ajouter une entrée dans TEX_DATA (js/data/texture-manifest.js) avec son chemin, puis définir le bloc dans js/data/blocks.js.

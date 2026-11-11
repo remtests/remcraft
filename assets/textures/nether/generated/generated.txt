@@ -1,0 +1,4 @@
+Textures générées (provisoires) : crimson_stem_side, warped_stem_side, shroomlight.
+Les textures latérales des tiges et celle du shroomlight n'étaient pas fournies (seul le dessus des tiges l'est) : ces images 16×16 sont construites à partir de la
+palette des textures officielles du dessus des tiges (écorce verticale) et d'orange pour le shroomlight. Pour les remplacer : déposer les vraies textures
+(PNG ou WebP, carrées, multiples de 16) et mettre à jour leur chemin dans TEX_DATA (js/data/texture-manifest.js).
